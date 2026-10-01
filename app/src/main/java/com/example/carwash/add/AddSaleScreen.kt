@@ -84,12 +84,20 @@ fun AddSaleScreen(
     val vehicleSizes by viewModel.vehicleSizes.collectAsState()
     val commissionRates by viewModel.commissionRates.collectAsState()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        com.example.carwash.utils.InterstitialAdHelper.loadAd(context)
+    }
 
     LaunchedEffect(uiState.saveSaleId) {
         uiState.saveSaleId?.let {
             viewModel.resetForm()
-            onSaleSaved()
+            val activity = with(com.example.carwash.utils.InterstitialAdHelper) { context.findActivity() }
+            com.example.carwash.utils.InterstitialAdHelper.showAdIfAvailable(activity) {
+                onSaleSaved()
+            }
         }
     }
 
