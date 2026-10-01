@@ -33,7 +33,12 @@ class CarwashApplication : Application() {
                 Log.d("CarwashApps", "Firebase initialized successfully with ${apps.size} apps.")
             }
 
-            // Initialize Google AdMob SDK safely
+            // Initialize Google AdMob SDK safely & configure test device rules
+            val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
+                .setTestDeviceIds(listOf(com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR))
+                .build()
+            MobileAds.setRequestConfiguration(requestConfiguration)
+
             MobileAds.initialize(this) { status ->
                 Log.d("CarwashApps", "AdMob MobileAds initialized successfully: $status")
             }

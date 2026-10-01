@@ -14,7 +14,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 object InterstitialAdHelper {
 
     // Google Official Test Interstitial Ad Unit ID (Prevents AdMob Account Bans during testing)
-    const val TEST_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
+    const val TEST_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-4394473472808077/2861630268"
 
     private var mInterstitialAd: InterstitialAd? = null
 
