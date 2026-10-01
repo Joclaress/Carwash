@@ -24,14 +24,14 @@ class PayMongoRepository @Inject constructor(
     private val client = OkHttpClient()
 
     // Fixed PayMongo Payment Link (Replace this URL with your exact PayMongo link whenever needed)
-    var defaultPayMongoLink: String = "https://pm.link/org-GmGGAdKQ1nJncKqm5JAH1DRL/tf1ipnP"
+    var defaultPayMongoLink: String = "https://pm.link/org-GmGGAdKQ1nJncKqm5JAH1DRL/4qWlVJq"
 
     // Optional PayMongo API Secret Key
     var payMongoSecretKey: String = "sk_test_a1b2c3d4e5f6g7h8i9j0"
 
     suspend fun createCheckoutSession(
-        amountPhp: Double = 999.00,
-        description: String = "Custoworks Carwash Pro Subscription (₱999/mo)"
+        amountPhp: Double = 199.00,
+        description: String = "Carwash Sale Tracker Pro Subscription (₱199/mo)"
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             if (defaultPayMongoLink.isNotBlank()) {

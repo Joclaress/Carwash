@@ -354,7 +354,7 @@ fun ProfileContent(
                                 if ((user?.remainingSubscriptionDays ?: 0) > 0)
                                     "Active Subscription • ${user?.remainingSubscriptionDays} day(s) remaining"
                                 else
-                                    "Active Subscription • ₱999/mo"
+                                    "Active Subscription • ₱199/mo"
                             } else {
                                 "${user?.remainingTrialDays ?: 0} day(s) remaining in free trial"
                             },

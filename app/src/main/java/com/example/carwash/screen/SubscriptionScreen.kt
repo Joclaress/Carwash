@@ -77,10 +77,10 @@ fun SubscriptionScreen(
 
     val onEmailSupportClick = {
         val supportEmail = "custoworks1@gmail.com"
-        val subject = Uri.encode("Paid via PayMongo (₱999) - Account Activation")
+        val subject = Uri.encode("Paid via PayMongo (₱199) - Account Activation")
         val body = Uri.encode(
-            "Hi Custoworks Support,\n\n" +
-                    "I completed my PayMongo payment for ₱999.00, but my subscription has not reflected yet.\n\n" +
+            "Hi Support,\n\n" +
+                    "I completed my PayMongo payment for ₱199.00, but my subscription has not reflected yet.\n\n" +
                     "Account Name: ${user?.name ?: "-"}\n" +
                     "Account Email: ${user?.email ?: "-"}\n" +
                     "User UID: ${user?.uid ?: "-"}\n\n" +
@@ -138,7 +138,7 @@ fun SubscriptionScreen(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = if (isExpired)
-                        "Your 7-day free trial has ended. Monthly payment of ₱999.00 via PayMongo is required to continue."
+                        "Your 7-day free trial has ended. Monthly payment of ₱199.00 via PayMongo is required to continue."
                     else
                         "You have $trialDaysLeft day(s) remaining in your free trial. Upgrade anytime to Pro!",
                     style = MaterialTheme.typography.bodyMedium,
@@ -164,7 +164,7 @@ fun SubscriptionScreen(
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            text = "₱999.00",
+                            text = "₱199.00",
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary
@@ -200,7 +200,7 @@ fun SubscriptionScreen(
                     } else {
                         Icon(Icons.Default.Payment, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Pay via PayMongo (₱999 GCash/Maya/Card)", fontWeight = FontWeight.Bold)
+                        Text("Pay via PayMongo (₱199 GCash/Maya/Card)", fontWeight = FontWeight.Bold)
                     }
                 }
 
