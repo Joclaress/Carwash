@@ -262,21 +262,14 @@ fun ProfileContent(
                     Surface(
                         modifier = Modifier.size(90.dp),
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primaryContainer
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            val initials = user?.name?.split(" ")
-                                ?.mapNotNull { it.firstOrNull()?.toString() }
-                                ?.take(2)
-                                ?.joinToString("")
-                                ?.uppercase() ?: "CW"
-                            Text(
-                                text = initials,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
+                            contentDescription = "App Logo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
                     }
 
                     Spacer(Modifier.height(16.dp))
