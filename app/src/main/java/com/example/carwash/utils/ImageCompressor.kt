@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,6 +33,14 @@ object ImageCompressor {
         FileOutputStream(output).use {
             it.write(bytes)
         }
+
+        try {
+            val exiOut = ExifInterface(output.absolutePath)
+            exiOut.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+            exiOut.saveAttributes()
+        } catch (e: Exception) {
+            Log.e("ImageCompressor", "Error setting EXIF normal: ${e.message}")
+        }
         
         if (!bitmap.isRecycled) {
             bitmap.recycle()
@@ -46,21 +55,39 @@ object ImageCompressor {
 
     private fun getRotationDegrees(context: Context, uri: Uri): Int {
         return try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                val exifInterface = ExifInterface(stream)
+            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+            if (pfd != null) {
+                val exifInterface = ExifInterface(pfd.fileDescriptor)
                 val orientation = exifInterface.getAttributeInt(
                     ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL
+                    ExifInterface.ORIENTATION_UNDEFINED
                 )
+                pfd.close()
                 when (orientation) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> 90
                     ExifInterface.ORIENTATION_ROTATE_180 -> 180
                     ExifInterface.ORIENTATION_ROTATE_270 -> 270
                     else -> 0
                 }
-            } ?: 0
+            } else 0
         } catch (e: Exception) {
-            0
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val exifInterface = ExifInterface(stream)
+                    val orientation = exifInterface.getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_UNDEFINED
+                    )
+                    when (orientation) {
+                        ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                        ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                        ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                        else -> 0
+                    }
+                } ?: 0
+            } catch (_: Exception) {
+                0
+            }
         }
     }
 
@@ -83,7 +110,9 @@ object ImageCompressor {
             BitmapFactory.decodeStream(it, null, options)
         } ?: throw Exception("Unable to decode image")
 
-        return if (rotationDegrees != 0) {
+        var resultBitmap = decodedBitmap
+
+        if (rotationDegrees != 0) {
             val matrix = Matrix()
             matrix.postRotate(rotationDegrees.toFloat())
             val rotated = Bitmap.createBitmap(
@@ -98,10 +127,10 @@ object ImageCompressor {
             if (rotated != decodedBitmap) {
                 decodedBitmap.recycle()
             }
-            rotated
-        } else {
-            decodedBitmap
+            resultBitmap = rotated
         }
+
+        return resultBitmap
     }
 
     private fun calculateSampleSize(
