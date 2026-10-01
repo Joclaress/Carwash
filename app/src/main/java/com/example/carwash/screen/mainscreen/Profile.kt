@@ -1,5 +1,6 @@
 package com.example.carwash.screen.mainscreen
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
@@ -65,6 +67,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -73,6 +76,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.carwash.components.CameraCaptureBox
 import com.example.carwash.model.AuthViewModel
 import com.example.carwash.model.CommissionRateItem
 import com.example.carwash.model.ProfileViewModel
@@ -81,6 +85,7 @@ import com.example.carwash.model.User
 import com.example.carwash.screen.Screen
 import com.example.carwash.screen.SubscriptionScreen
 import com.example.carwash.ui.theme.CarwashTheme
+import com.example.carwash.utils.BugReporter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -196,6 +201,7 @@ fun ProfileContent(
     var isAdminAuthenticated by remember { mutableStateOf(false) }
     var showAdminPasswordDialog by remember { mutableStateOf(false) }
     var showChangeAdminPasswordDialog by remember { mutableStateOf(false) }
+    var showReportBugDialog by remember { mutableStateOf(false) }
     var pendingCrudType by remember { mutableStateOf<CrudType?>(null) }
     var adminPasswordInput by remember { mutableStateOf("") }
     var adminPasswordError by remember { mutableStateOf<String?>(null) }
@@ -549,6 +555,19 @@ fun ProfileContent(
                 }
             }
 
+            // Report Bug / Technical Issue Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                ProfileOptionItem(
+                    icon = Icons.Default.BugReport,
+                    title = "Report Bug / Technical Issue",
+                    subtitle = "Send issue details & screenshot to support",
+                    onClick = { showReportBugDialog = true }
+                )
+            }
+
             Spacer(Modifier.height(10.dp))
 
             // Logout Button
@@ -726,6 +745,73 @@ fun ProfileContent(
             },
             dismissButton = {
                 TextButton(onClick = { showChangeAdminPasswordDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Report Bug Dialog
+    if (showReportBugDialog) {
+        var bugDescription by remember { mutableStateOf("") }
+        var bugScreenshotUri by remember { mutableStateOf<Uri?>(null) }
+        val context = LocalContext.current
+
+        AlertDialog(
+            onDismissRequest = { showReportBugDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.BugReport,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = { Text("Report Bug / Technical Issue", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Describe what bug or error occurred. You can also capture or attach a screenshot.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = bugDescription,
+                        onValueChange = { bugDescription = it },
+                        label = { Text("Describe Issue / Bug") },
+                        placeholder = { Text("e.g. Total sale calculation did not display") },
+                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    CameraCaptureBox(
+                        title = "Attach Bug Photo / Screenshot",
+                        imageUri = bugScreenshotUri,
+                        onImageCaptured = { bugScreenshotUri = it },
+                        onRemove = { bugScreenshotUri = null }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        BugReporter.sendBugReport(
+                            context = context,
+                            userDescription = bugDescription,
+                            screenshotUri = bugScreenshotUri
+                        )
+                        showReportBugDialog = false
+                    }
+                ) {
+                    Text("Send Email to Support")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReportBugDialog = false }) {
                     Text("Cancel")
                 }
             }
