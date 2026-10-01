@@ -1,5 +1,6 @@
 package com.example.carwash.model
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import com.example.carwash.add.cleanPlateNumber
 import com.example.carwash.add.normalizePlateNumber
 import com.example.carwash.repository.SaleRepository
 import com.example.carwash.repository.SettingsRepository
+import com.example.carwash.utils.PlateNumberOcr
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +53,15 @@ class AddSaleViewModel @Inject constructor(
     fun setVehicleImage(uri: Uri?) {
         updateDraft { draft ->
             draft.copy(vehicleImageUri = uri)
+        }
+    }
+
+    fun scanPlateNumberOcr(context: Context, imageUri: Uri) {
+        viewModelScope.launch {
+            val scannedPlate = PlateNumberOcr.recognizePlateNumber(context, imageUri)
+            if (!scannedPlate.isNullOrBlank()) {
+                updatePlateNumber(scannedPlate)
+            }
         }
     }
 
@@ -170,7 +181,7 @@ class AddSaleViewModel @Inject constructor(
     fun nextStep() {
         val currentState = _uiState.value
         val error = validateCurrentstep(step = currentState.currentStep, draft = currentState.draft)
-        
+
         if (error != null) {
             showError(error)
             return

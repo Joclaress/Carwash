@@ -76,6 +76,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.android.gms:play-services-ads:23.6.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation(libs.playAuth)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
     testImplementation(libs.junit)

@@ -128,13 +128,17 @@ fun AddSaleScreen(
             ) {
                 when (uiState.currentStep) {
                     AddSaleStep.VEHICLE_IMAGE -> {
+                        val context = androidx.compose.ui.platform.LocalContext.current
                         VehicleStep(
                             vehicleImageUri = uiState.draft.vehicleImageUri,
                             plateNumber = uiState.draft.plateNumber,
                             isRepeatCustomer = uiState.isRepeatCustomer,
                             selectedTeam = uiState.draft.assignedTeamName,
                             teams = teams,
-                            onVehicleImageSelected = viewModel::setVehicleImage,
+                            onVehicleImageSelected = { uri ->
+                                viewModel.setVehicleImage(uri)
+                                uri?.let { viewModel.scanPlateNumberOcr(context, it) }
+                            },
                             onRemoveVehicle = viewModel::removeVehicle,
                             onPlateNumberChanged = viewModel::updatePlateNumber,
                             onTeamSelected = viewModel::selectTeam
