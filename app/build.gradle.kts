@@ -14,7 +14,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "package.com.example.carwash"
+        applicationId = "com.example.carwash"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
