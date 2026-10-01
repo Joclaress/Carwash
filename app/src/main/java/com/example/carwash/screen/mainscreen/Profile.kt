@@ -352,7 +352,7 @@ fun ProfileContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (user?.isSubscriptionValid == true) "Custoworks Pro Plan" else "Free Trial Plan",
+                            text = if (user?.isSubscriptionValid == true) "Carwash Sale Tracker Pro Plan" else "Free Trial Plan",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )

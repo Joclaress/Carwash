@@ -54,7 +54,7 @@ fun Home(
         ) {
             item {
                 Text(
-                    text = "Custoworks Dashboard",
+                    text = "Carwash Sale Tracker Dashboard",
                     style = MaterialTheme.typography.headlineMedium
                 )
             }

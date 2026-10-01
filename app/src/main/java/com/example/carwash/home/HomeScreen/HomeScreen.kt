@@ -374,13 +374,15 @@ private fun HomeHeader() {
 
     Column {
         Text(
-            text = "CUSTOWORKS",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold
+            text = "CARWASH SALE TRACKER",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Carwash • Detailing • Repaint",
-            style = MaterialTheme.typography.bodyMedium
+            text = "Sales • Commissions • Teams",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline
         )
         Spacer(Modifier.height(18.dp))
 

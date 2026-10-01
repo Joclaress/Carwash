@@ -157,7 +157,7 @@ fun SubscriptionScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Custoworks Pro Subscription",
+                        text = "Carwash Sale Tracker Pro Subscription",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
