@@ -41,6 +41,43 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894291379359:android:f2477120672509aea20eaa",
+        "android_client_info": {
+          "package_name": "package.com.example.carwash"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "894291379359-k8q8e4ks7q20n14c2mg62fsduptsg5tm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "package.com.example.carwash",
+            "certificate_hash": "e27d4d79397dc5a250106c51758940e36a1fce82"
+          }
+        },
+        {
+          "client_id": "894291379359-l8ja30hhb5dclgke75j0js0konajouep.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0sOqMcTLdUnkNYeTslHv6VN0LcZdZ5N4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "894291379359-l8ja30hhb5dclgke75j0js0konajouep.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
