@@ -3,6 +3,8 @@ package com.example.carwash.home.HomeScreen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -505,13 +507,15 @@ private fun TeamSalesSection(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             teamSummaries.forEach { summary ->
                 val isSelected = selectedTeamFilter == summary.teamName
                 TeamSalesCard(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.width(200.dp),
                     summary = summary,
                     isSelected = isSelected,
                     onClick = {
