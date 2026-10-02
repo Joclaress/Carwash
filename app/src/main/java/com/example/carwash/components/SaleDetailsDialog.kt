@@ -242,15 +242,20 @@ fun SaleDetailsDialog(
 
     // Edit Sale Details Dialog
     if (showEditDialog) {
-        var editAmountText by remember { mutableStateOf(sale.amount.toString()) }
         var editPlateText by remember { mutableStateOf(sale.plateNumber) }
+        var editAmountText by remember { mutableStateOf(sale.amount.toString()) }
+        var editCommissionText by remember { mutableStateOf((sale.workerPercent * 100).toInt().toString()) }
+        var editTeamText by remember { mutableStateOf(sale.assignedTeam) }
         var editNotesText by remember { mutableStateOf(sale.notes) }
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Edit Sale Details") },
+            title = { Text("Edit Sale Details", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     OutlinedTextField(
                         value = editPlateText,
                         onValueChange = { editPlateText = it },
@@ -260,8 +265,21 @@ fun SaleDetailsDialog(
                     OutlinedTextField(
                         value = editAmountText,
                         onValueChange = { editAmountText = it },
-                        label = { Text("Amount (₱)") },
+                        label = { Text("Total Amount (₱)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editCommissionText,
+                        onValueChange = { editCommissionText = it },
+                        label = { Text("Carwash Boy Commission % (e.g. 40)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editTeamText,
+                        onValueChange = { editTeamText = it },
+                        label = { Text("Assigned Team (e.g. Team A)") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -276,12 +294,19 @@ fun SaleDetailsDialog(
                 Button(
                     onClick = {
                         val newAmount = editAmountText.toDoubleOrNull() ?: sale.amount
+                        val parsedCommPct = editCommissionText.toDoubleOrNull() ?: (sale.workerPercent * 100.0)
+                        val newWorkerPct = (parsedCommPct / 100.0).coerceIn(0.0, 1.0)
+                        val newOwnerPct = (1.0 - newWorkerPct).coerceAtLeast(0.0)
+
                         val updatedSale = sale.copy(
                             plateNumber = editPlateText.trim(),
                             amount = newAmount,
-                            notes = editNotesText.trim(),
-                            workerCommission = newAmount * sale.workerPercent,
-                            ownerShare = newAmount * sale.ownerPercent
+                            assignedTeam = editTeamText.trim(),
+                            workerPercent = newWorkerPct,
+                            ownerPercent = newOwnerPct,
+                            workerCommission = newAmount * newWorkerPct,
+                            ownerShare = newAmount * newOwnerPct,
+                            notes = editNotesText.trim()
                         )
                         onUpdateSale(updatedSale)
                         showEditDialog = false
