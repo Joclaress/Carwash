@@ -833,12 +833,51 @@ private fun RecentSaleCard(
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = formatCurrency(sale.amount),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
+                PaymentMethodBadge(method = sale.paymentMethod)
+                Spacer(Modifier.height(4.dp))
                 CommissionBadge(percent = sale.workerPercent)
             }
         }
+    }
+}
+
+@Composable
+private fun PaymentMethodBadge(method: String) {
+    val cleanMethod = method.ifBlank { "CASH" }.uppercase()
+    val isGcash = cleanMethod.contains("GCASH")
+    val isMaya = cleanMethod.contains("MAYA")
+
+    val bgColor = if (isGcash) {
+        androidx.compose.ui.graphics.Color(0xFF0072FF).copy(alpha = 0.15f)
+    } else if (isMaya) {
+        androidx.compose.ui.graphics.Color(0xFF00D632).copy(alpha = 0.15f)
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+
+    val textColor = if (isGcash) {
+        androidx.compose.ui.graphics.Color(0xFF0072FF)
+    } else if (isMaya) {
+        androidx.compose.ui.graphics.Color(0xFF00B327)
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    Surface(
+        color = bgColor,
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = cleanMethod,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = textColor
+        )
     }
 }
 

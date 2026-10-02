@@ -450,19 +450,53 @@ private fun HistorySaleCard(
                     fontWeight = FontWeight.Bold
                 )
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
+
+                PaymentMethodBadge(method = sale.paymentMethod)
+
+                Spacer(Modifier.height(4.dp))
 
                 HistoryCommissionBadge(
                     percentage = sale.workerPercent
                 )
-
-                Spacer(Modifier.height(6.dp))
-
-                PaymentBadge(
-                    paymentMethod = sale.paymentMethod
-                )
             }
         }
+    }
+}
+
+@Composable
+private fun PaymentMethodBadge(method: String) {
+    val cleanMethod = method.ifBlank { "CASH" }.uppercase()
+    val isGcash = cleanMethod.contains("GCASH")
+    val isMaya = cleanMethod.contains("MAYA")
+
+    val bgColor = if (isGcash) {
+        androidx.compose.ui.graphics.Color(0xFF0072FF).copy(alpha = 0.15f)
+    } else if (isMaya) {
+        androidx.compose.ui.graphics.Color(0xFF00D632).copy(alpha = 0.15f)
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+
+    val textColor = if (isGcash) {
+        androidx.compose.ui.graphics.Color(0xFF0072FF)
+    } else if (isMaya) {
+        androidx.compose.ui.graphics.Color(0xFF00B327)
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    Surface(
+        color = bgColor,
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = cleanMethod,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = textColor
+        )
     }
 }
 
