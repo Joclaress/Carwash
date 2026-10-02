@@ -76,6 +76,19 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun sendPasswordResetEmail(email: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            val result = repository.sendPasswordResetEmail(email)
+            _loading.value = false
+            if (result.isSuccess) {
+                onResult(true, "Password reset email sent! Please check your inbox & spam folder.")
+            } else {
+                onResult(false, result.exceptionOrNull()?.message ?: "Failed to send reset email.")
+            }
+        }
+    }
+
     fun updateAdminPassword(newPassword: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val result = repository.updateAdminPassword(newPassword)

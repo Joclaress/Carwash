@@ -69,6 +69,15 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+        return try {
+            auth.sendPasswordResetEmail(email.trim()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun updateAdminPassword(newAdminPassword: String): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid ?: return Result.failure(IllegalStateException("User not authenticated"))
