@@ -11,14 +11,14 @@ plugins {
 android {
     
     namespace = "com.example.carwash"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "package.com.example.carwash"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
