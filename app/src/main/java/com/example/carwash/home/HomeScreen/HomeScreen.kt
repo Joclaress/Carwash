@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
@@ -225,7 +226,8 @@ fun HomeScreenContent(
                     item {
                         CommissionSection(
                             worker = uiState.todayWorkerCommision,
-                            owner = uiState.todayOwnerShare
+                            owner = uiState.todayOwnerShare,
+                            adminPassword = user?.effectiveAdminPassword ?: "admin123"
                         )
                     }
                     item {
@@ -695,8 +697,12 @@ private fun QuickActionCard(
 @Composable
 private fun CommissionSection(
     worker: Double,
-    owner: Double
+    owner: Double,
+    adminPassword: String = "admin123"
 ) {
+    var isOwnerUnlocked by remember { mutableStateOf(false) }
+    var showOwnerAuthDialog by remember { mutableStateOf(false) }
+
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -717,9 +723,19 @@ private fun CommissionSection(
             CommisionCard(
                 modifier = Modifier.weight(1f),
                 title = "Owner",
-                amount = owner
+                amount = owner,
+                isLocked = !isOwnerUnlocked,
+                onClickLocked = { showOwnerAuthDialog = true }
             )
         }
+    }
+
+    if (showOwnerAuthDialog) {
+        com.example.carwash.components.AdminAuthDialog(
+            adminPassword = adminPassword,
+            onDismiss = { showOwnerAuthDialog = false },
+            onSuccess = { isOwnerUnlocked = true }
+        )
     }
 }
 
@@ -727,29 +743,46 @@ private fun CommissionSection(
 private fun CommisionCard(
     modifier: Modifier,
     title: String,
-    amount: Double
+    amount: Double,
+    isLocked: Boolean = false,
+    onClickLocked: () -> Unit = {}
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.then(if (isLocked) Modifier.clickable { onClickLocked() } else Modifier),
         shape = RoundedCornerShape(18.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge
+                )
+                if (isLocked) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Locked",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = formatCurrency(amount),
+                text = if (isLocked) "₱ • • • • •" else formatCurrency(amount),
                 style = MaterialTheme.typography.titleLarge,
-                color = Color(0xFFFFA500),
+                color = if (isLocked) MaterialTheme.colorScheme.outline else Color(0xFFFFA500),
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Total for today",
-                style = MaterialTheme.typography.bodySmall
+                text = if (isLocked) "Tap to unlock" else "Total for today",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
         }
     }

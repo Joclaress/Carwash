@@ -1,5 +1,6 @@
 package com.example.carwash.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,6 +63,7 @@ fun SaleDetailsDialog(
     var showAdminPasswordDialog by remember { mutableStateOf(false) }
     var pendingAction by remember { mutableStateOf<String?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var isOwnerShareUnlocked by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -119,7 +121,24 @@ fun SaleDetailsDialog(
                 val workerAmount = if (sale.workerCommission > 0) sale.workerCommission else sale.amount * sale.workerPercent
                 val ownerAmount = if (sale.ownerShare > 0) sale.ownerShare else sale.amount * sale.ownerPercent
                 DetailRow("Carwash Boy Commission", "${"₱%,.2f".format(workerAmount)} (${(sale.workerPercent * 100).toInt()}%)")
-                DetailRow("Owner Share", "${"₱%,.2f".format(ownerAmount)} (${(sale.ownerPercent * 100).toInt()}%)")
+
+                val ownerDisplay = if (isOwnerShareUnlocked) {
+                    "${"₱%,.2f".format(ownerAmount)} (${(sale.ownerPercent * 100).toInt()}%)"
+                } else {
+                    "₱ • • • • • (Tap to Unlock)"
+                }
+
+                DetailRow(
+                    label = "Owner Share",
+                    value = ownerDisplay,
+                    onClick = if (!isOwnerShareUnlocked) {
+                        {
+                            pendingAction = "VIEW_OWNER"
+                            showAdminPasswordDialog = true
+                        }
+                    } else null
+                )
+
                 DetailRow("Payment Method", sale.paymentMethod.ifBlank { "CASH" })
                 if (sale.referenceNumber.isNotBlank()) {
                     DetailRow("Ref #", sale.referenceNumber)
@@ -170,11 +189,17 @@ fun SaleDetailsDialog(
         }
     )
 
-    // Admin Password Dialog for CRUD on Sales
+    // Admin Password Dialog
     if (showAdminPasswordDialog) {
         var passwordInput by remember { mutableStateOf("") }
         var passwordError by remember { mutableStateOf<String?>(null) }
         var passwordVisible by remember { mutableStateOf(false) }
+
+        val actionTitle = when (pendingAction) {
+            "DELETE" -> "delete"
+            "EDIT" -> "edit"
+            else -> "view Owner Share"
+        }
 
         AlertDialog(
             onDismissRequest = { showAdminPasswordDialog = false },
@@ -184,7 +209,7 @@ fun SaleDetailsDialog(
             title = { Text("Admin Authentication Required", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Enter admin password to ${if (pendingAction == "DELETE") "delete" else "edit"} this sale.")
+                    Text("Enter admin password to $actionTitle.")
                     OutlinedTextField(
                         value = passwordInput,
                         onValueChange = {
@@ -204,6 +229,7 @@ fun SaleDetailsDialog(
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                     passwordError?.let { err ->
@@ -218,11 +244,17 @@ fun SaleDetailsDialog(
                         if (passwordInput.trim() == targetPass) {
                             showAdminPasswordDialog = false
                             passwordError = null
-                            if (pendingAction == "DELETE") {
-                                onDeleteSale(sale)
-                                onDismiss()
-                            } else if (pendingAction == "EDIT") {
-                                showEditDialog = true
+                            when (pendingAction) {
+                                "DELETE" -> {
+                                    onDeleteSale(sale)
+                                    onDismiss()
+                                }
+                                "EDIT" -> {
+                                    showEditDialog = true
+                                }
+                                "VIEW_OWNER" -> {
+                                    isOwnerShareUnlocked = true
+                                }
                             }
                         } else {
                             passwordError = "Incorrect Admin Password"
@@ -326,9 +358,15 @@ fun SaleDetailsDialog(
 }
 
 @Composable
-private fun DetailRow(label: String, value: String) {
+private fun DetailRow(
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null
+) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)

@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -135,12 +136,14 @@ fun SalesHistoryScreen(
                     }
 
                     item {
+                        val user by authViewModel.user.collectAsState()
                         HistorySummary(
                             total = uiState.totalSales,
                             transactions = uiState.filteredSales.size,
                             worker = uiState.workCommission,
                             owner = uiState.ownerShare,
-                            average = uiState.averageSale
+                            average = uiState.averageSale,
+                            adminPassword = user?.effectiveAdminPassword ?: "admin123"
                         )
                     }
 
@@ -286,8 +289,12 @@ private fun HistorySummary(
     transactions: Int,
     worker: Double,
     owner: Double,
-    average: Double
+    average: Double,
+    adminPassword: String = "admin123"
 ) {
+    var isOwnerUnlocked by remember { mutableStateOf(false) }
+    var showOwnerAuthDialog by remember { mutableStateOf(false) }
+
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -312,7 +319,9 @@ private fun HistorySummary(
                 modifier = Modifier.weight(1f),
                 title = "Owner",
                 amount = owner,
-                subtitle = "Income"
+                subtitle = if (isOwnerUnlocked) "Income" else "Tap to Unlock",
+                isLocked = !isOwnerUnlocked,
+                onClickLocked = { showOwnerAuthDialog = true }
             )
         }
 
@@ -322,6 +331,14 @@ private fun HistorySummary(
             subtitle = "Average per transaction"
         )
     }
+
+    if (showOwnerAuthDialog) {
+        com.example.carwash.components.AdminAuthDialog(
+            adminPassword = adminPassword,
+            onDismiss = { showOwnerAuthDialog = false },
+            onSuccess = { isOwnerUnlocked = true }
+        )
+    }
 }
 
 @Composable
@@ -329,31 +346,49 @@ private fun HistorySummaryCard(
     modifier: Modifier = Modifier,
     title: String,
     amount: Double,
-    subtitle: String
+    subtitle: String,
+    isLocked: Boolean = false,
+    onClickLocked: () -> Unit = {}
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.then(if (isLocked) Modifier.clickable { onClickLocked() } else Modifier),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge
+                )
+                if (isLocked) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Locked",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
             Spacer(Modifier.height(6.dp))
 
             Text(
-                text = formatCurrency(amount),
+                text = if (isLocked) "₱ • • • • •" else formatCurrency(amount),
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = if (isLocked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
             )
 
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
         }
     }

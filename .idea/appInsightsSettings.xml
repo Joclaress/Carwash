@@ -23,7 +23,7 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.example.carwash" />
+                  <option name="appId" value="package.com.example.carwash" />
                   <option name="mobileSdkAppId" value="1:894291379359:android:f2477120672509aea20eaa" />
                   <option name="projectId" value="custoworks-carwash" />
                   <option name="projectNumber" value="894291379359" />
