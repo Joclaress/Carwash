@@ -98,6 +98,18 @@ class SalesHistoryViewModel @Inject constructor(
 
         val total = result.sumOf { it.amount }
 
+        val cashTotal = result
+            .filter { it.paymentMethod.isBlank() || it.paymentMethod.equals("CASH", ignoreCase = true) }
+            .sumOf { it.amount }
+
+        val gcashTotal = result
+            .filter { it.paymentMethod.contains("GCASH", ignoreCase = true) }
+            .sumOf { it.amount }
+
+        val mayaTotal = result
+            .filter { it.paymentMethod.contains("MAYA", ignoreCase = true) }
+            .sumOf { it.amount }
+
         val worker = result.sumOf { sale ->
             if (sale.workerCommission > 0.0) {
                 sale.workerCommission
@@ -119,6 +131,9 @@ class SalesHistoryViewModel @Inject constructor(
         _uiState.value = current.copy(
             filteredSales = result,
             totalSales = total,
+            cashSales = cashTotal,
+            gcashSales = gcashTotal,
+            mayaSales = mayaTotal,
             workCommission = worker,
             ownerShare = owner,
             averageSale = average,

@@ -140,6 +140,8 @@ fun SalesHistoryScreen(
                         HistorySummary(
                             total = uiState.totalSales,
                             transactions = uiState.filteredSales.size,
+                            cash = uiState.cashSales,
+                            gcash = uiState.gcashSales,
                             worker = uiState.workCommission,
                             owner = uiState.ownerShare,
                             average = uiState.averageSale,
@@ -287,6 +289,8 @@ private fun SalesFilterChip(
 private fun HistorySummary(
     total: Double,
     transactions: Int,
+    cash: Double,
+    gcash: Double,
     worker: Double,
     owner: Double,
     average: Double,
@@ -303,6 +307,25 @@ private fun HistorySummary(
             amount = total,
             subtitle = "$transactions Transactions"
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            HistorySummaryCard(
+                modifier = Modifier.weight(1f),
+                title = "💵 Cash Sales",
+                amount = cash,
+                subtitle = "Cash Payments"
+            )
+
+            HistorySummaryCard(
+                modifier = Modifier.weight(1f),
+                title = "💙 GCash Sales",
+                amount = gcash,
+                subtitle = "GCash Payments"
+            )
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
