@@ -59,6 +59,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.example.carwash.add.Sale
 import com.example.carwash.add.cleanPlateNumber
+import com.example.carwash.components.OfflineStatusBanner
 import com.example.carwash.components.SaleDetailsDialog
 import com.example.carwash.home.HomeUiState
 import com.example.carwash.home.TeamSalesSummary
@@ -113,7 +114,8 @@ fun HomeScreen(
         onUpgradeClick = { showSubscriptionPayScreen = true },
         onSelectTeamFilter = viewModel::selectTeamFilter,
         onDeleteSale = viewModel::deleteSale,
-        onUpdateSale = viewModel::updateSale
+        onUpdateSale = viewModel::updateSale,
+        onSyncNowClick = viewModel::manualSyncOfflineSales
     )
 
     if (showSubscriptionPayScreen) {
@@ -145,7 +147,8 @@ fun HomeScreenContent(
     onUpgradeClick: () -> Unit = {},
     onSelectTeamFilter: (String?) -> Unit = {},
     onDeleteSale: (String) -> Unit = {},
-    onUpdateSale: (Sale) -> Unit = {}
+    onUpdateSale: (Sale) -> Unit = {},
+    onSyncNowClick: () -> Unit = {}
 ) {
     var selectedSaleForDetails by remember { mutableStateOf<Sale?>(null) }
     var isOwnerUnlocked by remember { mutableStateOf(false) }
@@ -200,6 +203,16 @@ fun HomeScreenContent(
                 ) {
                     item {
                         HomeHeader()
+                    }
+                    if (!uiState.isOnline || uiState.pendingOfflineCount > 0) {
+                        item {
+                            OfflineStatusBanner(
+                                isOnline = uiState.isOnline,
+                                pendingCount = uiState.pendingOfflineCount,
+                                isSyncing = uiState.isSyncingOffline,
+                                onSyncNowClick = onSyncNowClick
+                            )
+                        }
                     }
                     if (user != null && user.isTrialActive) {
                         item {

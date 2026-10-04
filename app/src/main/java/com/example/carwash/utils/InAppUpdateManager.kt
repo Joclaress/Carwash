@@ -25,20 +25,26 @@ object InAppUpdateManager {
                     && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
                 ) {
                     Log.d("InAppUpdateManager", "Immediate force update available on Google Play!")
-                    appUpdateManager.startUpdateFlowForResult(
-                        appUpdateInfo,
-                        activity,
-                        AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build(),
-                        REQUEST_CODE_FORCE_UPDATE
-                    )
+                    try {
+                        appUpdateManager.startUpdateFlowForResult(
+                            appUpdateInfo,
+                            activity,
+                            AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build(),
+                            REQUEST_CODE_FORCE_UPDATE
+                        )
+                    } catch (e: Exception) {
+                        Log.e("InAppUpdateManager", "Error starting update flow: ${e.message}", e)
+                    }
                 } else {
                     Log.d("InAppUpdateManager", "App is up to date.")
                 }
             }.addOnFailureListener { e ->
                 Log.e("InAppUpdateManager", "Failed checking for update: ${e.message}")
             }
+        } catch (e: SecurityException) {
+            Log.e("InAppUpdateManager", "SecurityException during in-app update check (GMS broker): ${e.message}", e)
         } catch (e: Exception) {
-            Log.e("InAppUpdateManager", "Error checking in-app update: ${e.message}")
+            Log.e("InAppUpdateManager", "Error checking in-app update: ${e.message}", e)
         }
     }
 

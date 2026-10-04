@@ -67,10 +67,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.example.carwash.components.CameraCaptureBox
+import com.example.carwash.components.OfflineStatusBanner
 import com.example.carwash.model.AddSaleViewModel
 import com.example.carwash.model.CommissionRateItem
 import com.example.carwash.model.PaymentMethod
 import com.example.carwash.model.ServicePackage
+import com.example.carwash.repository.OfflineSaleSyncManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,15 +94,37 @@ fun AddSaleScreen(
     }
 
     LaunchedEffect(uiState.saveSaleId) {
-        uiState.saveSaleId?.let {
+        uiState.saveSaleId?.let { saleId ->
             val draft = uiState.draft
-            com.example.carwash.utils.NotificationHelper.showSaleAddedNotification(
-                context = context,
-                plateNumber = draft.plateNumber,
-                packageName = draft.selectedPackage?.name ?: "Carwash",
-                amount = draft.amount,
-                paymentMethod = draft.paymentMethod.name
-            )
+            val isOffline = saleId.startsWith("offline_")
+
+            if (isOffline) {
+                android.widget.Toast.makeText(
+                    context,
+                    "No internet connection. Your item has been saved and will upload when the internet is restored.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                com.example.carwash.utils.NotificationHelper.showOfflineSavedNotification(
+                    context = context,
+                    plateNumber = draft.plateNumber,
+                    packageName = draft.selectedPackage?.name ?: "Carwash",
+                    amount = draft.amount
+                )
+            } else {
+                android.widget.Toast.makeText(
+                    context,
+                    "Sale saved successfully!",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                com.example.carwash.utils.NotificationHelper.showSaleAddedNotification(
+                    context = context,
+                    plateNumber = draft.plateNumber,
+                    packageName = draft.selectedPackage?.name ?: "Carwash",
+                    amount = draft.amount,
+                    paymentMethod = draft.paymentMethod.name
+                )
+            }
+
             viewModel.resetForm()
             val activity = with(com.example.carwash.utils.InterstitialAdHelper) { context.findActivity() }
             com.example.carwash.utils.InterstitialAdHelper.showAdIfAvailable(activity) {
@@ -130,6 +154,17 @@ fun AddSaleScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            val isOnline = remember(uiState) { OfflineSaleSyncManager.isInternetAvailable(context) }
+            val pendingCount = remember(uiState) { OfflineSaleSyncManager.getPendingSalesCount(context) }
+
+            if (!isOnline || pendingCount > 0) {
+                OfflineStatusBanner(
+                    isOnline = isOnline,
+                    pendingCount = pendingCount,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             StepIndicator(
                 currentStep = uiState.currentStepNumber,
                 totalSteps = uiState.totalSteps
@@ -144,7 +179,7 @@ fun AddSaleScreen(
             ) {
                 when (uiState.currentStep) {
                     AddSaleStep.VEHICLE_IMAGE -> {
-                        val context = androidx.compose.ui.platform.LocalContext.current
+                        val localContext = androidx.compose.ui.platform.LocalContext.current
                         VehicleStep(
                             vehicleImageUri = uiState.draft.vehicleImageUri,
                             plateNumber = uiState.draft.plateNumber,
@@ -153,7 +188,7 @@ fun AddSaleScreen(
                             teams = teams,
                             onVehicleImageSelected = { uri ->
                                 viewModel.setVehicleImage(uri)
-                                uri?.let { viewModel.scanPlateNumberOcr(context, it) }
+                                uri?.let { viewModel.scanPlateNumberOcr(localContext, it) }
                             },
                             onRemoveVehicle = viewModel::removeVehicle,
                             onPlateNumberChanged = viewModel::updatePlateNumber,

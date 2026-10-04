@@ -1,13 +1,17 @@
 package com.example.carwash.model
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.carwash.add.Sale
 import com.example.carwash.add.cleanPlateNumber
 import com.example.carwash.home.HomeUiState
 import com.example.carwash.home.TeamSalesSummary
+import com.example.carwash.repository.OfflineSaleSyncManager
 import com.example.carwash.repository.SaleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -17,6 +21,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repository: SaleRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -25,6 +30,42 @@ class HomeViewModel @Inject constructor(
 
     init {
         observeSales()
+        syncOfflineSales()
+        startOfflineStateObserver()
+    }
+
+    fun manualSyncOfflineSales() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSyncingOffline = true)
+            OfflineSaleSyncManager.syncPendingSales(context, repository)
+            updateOfflineState()
+        }
+    }
+
+    private fun startOfflineStateObserver() {
+        viewModelScope.launch {
+            while (true) {
+                updateOfflineState()
+                delay(2000L)
+            }
+        }
+    }
+
+    private fun updateOfflineState() {
+        val isOnline = OfflineSaleSyncManager.isInternetAvailable(context)
+        val pendingCount = OfflineSaleSyncManager.getPendingSalesCount(context)
+        _uiState.value = _uiState.value.copy(
+            isOnline = isOnline,
+            pendingOfflineCount = pendingCount,
+            isSyncingOffline = false
+        )
+    }
+
+    private fun syncOfflineSales() {
+        viewModelScope.launch {
+            OfflineSaleSyncManager.syncPendingSales(context, repository)
+            updateOfflineState()
+        }
     }
 
     private fun observeSales() {
@@ -138,7 +179,7 @@ class HomeViewModel @Inject constructor(
             .filter { it.value.size > 1 }
             .keys
 
-        _uiState.value = HomeUiState(
+        _uiState.value = _uiState.value.copy(
             todaySales = todaySales,
             yesterdaySales = yesterdaySales,
             monthSales = monthSales,

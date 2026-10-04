@@ -41,13 +41,19 @@ class CarwashApplication : Application() {
             }
 
             // Initialize Google AdMob SDK safely & configure test device rules
-            val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
-                .setTestDeviceIds(listOf(com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR))
-                .build()
-            MobileAds.setRequestConfiguration(requestConfiguration)
+            try {
+                val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
+                    .setTestDeviceIds(listOf(com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR))
+                    .build()
+                MobileAds.setRequestConfiguration(requestConfiguration)
 
-            MobileAds.initialize(this) { status ->
-                Log.d("CarwashApps", "AdMob MobileAds initialized successfully: $status")
+                MobileAds.initialize(this) { status ->
+                    Log.d("CarwashApps", "AdMob MobileAds initialized successfully: $status")
+                }
+            } catch (e: SecurityException) {
+                Log.e("CarwashApps", "SecurityException during MobileAds init (GMS broker): ${e.message}", e)
+            } catch (e: Exception) {
+                Log.e("CarwashApps", "Error initializing MobileAds: ${e.message}", e)
             }
 
             // Start offline sale auto-sync connectivity listener
@@ -58,16 +64,22 @@ class CarwashApplication : Application() {
             }
 
             // Check for Google Play Services availability
-            val availability = GoogleApiAvailability.getInstance()
-            val resultCode = availability.isGooglePlayServicesAvailable(this)
+            try {
+                val availability = GoogleApiAvailability.getInstance()
+                val resultCode = availability.isGooglePlayServicesAvailable(this)
 
-            if (resultCode != ConnectionResult.SUCCESS) {
-                Log.e("CarwashApps", "Google Play Services issue: ${availability.getErrorString(resultCode)}")
-                if (availability.isUserResolvableError(resultCode)) {
-                    Log.w("CarwashApps", "This error is user-resolvable. Please update Google Play Services.")
+                if (resultCode != ConnectionResult.SUCCESS) {
+                    Log.e("CarwashApps", "Google Play Services issue: ${availability.getErrorString(resultCode)}")
+                    if (availability.isUserResolvableError(resultCode)) {
+                        Log.w("CarwashApps", "This error is user-resolvable. Please update Google Play Services.")
+                    }
+                } else {
+                    Log.d("CarwashApps", "Google Play Services is available and verified.")
                 }
-            } else {
-                Log.d("CarwashApps", "Google Play Services is available and verified.")
+            } catch (e: SecurityException) {
+                Log.e("CarwashApps", "SecurityException checking Google Play Services (GMS broker): ${e.message}", e)
+            } catch (e: Exception) {
+                Log.e("CarwashApps", "Error checking Google Play Services availability: ${e.message}", e)
             }
         } catch (e: Exception) {
             Log.e("CarwashApps", "Error during application initialization", e)

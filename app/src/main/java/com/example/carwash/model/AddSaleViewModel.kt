@@ -243,11 +243,17 @@ class AddSaleViewModel @Inject constructor(
             val result = saleRepository.saveSale(currentState.draft)
 
             result.onSuccess { saleId ->
+                val isOffline = saleId.startsWith("offline_")
+                val message = if (isOffline) {
+                    "No internet connection. Your item has been saved and will upload when the internet is restored."
+                } else {
+                    "Sale saved successfully!"
+                }
                 _uiState.update { state ->
                     state.copy(
                         isSaving = false,
                         saveSaleId = saleId,
-                        successMessage = "Sale saved successfully!",
+                        successMessage = message,
                         errorMessage = null
                     )
                 }

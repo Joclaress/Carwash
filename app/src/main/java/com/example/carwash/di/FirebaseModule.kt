@@ -29,8 +29,18 @@ object FirebaseModule {
     @Provides
     @Singleton
     fun provideFirebaseStorage(): FirebaseStorage {
-        // Explicitly specify the bucket name from google-services.json to avoid 404 Not Found errors
-        // during initialization if the default instance fails to pick it up.
-        return FirebaseStorage.getInstance("gs://custoworks-carwash.firebasestorage.app")
+        val storage = try {
+            FirebaseStorage.getInstance()
+        } catch (_: Exception) {
+            try {
+                FirebaseStorage.getInstance("gs://custoworks-carwash.firebasestorage.app")
+            } catch (_: Exception) {
+                FirebaseStorage.getInstance("gs://custoworks-carwash.appspot.com")
+            }
+        }
+        // Set upload and operation retry timeouts to 30 seconds to allow responsive fallback
+        storage.maxUploadRetryTimeMillis = 30_000L
+        storage.maxOperationRetryTimeMillis = 30_000L
+        return storage
     }
 }

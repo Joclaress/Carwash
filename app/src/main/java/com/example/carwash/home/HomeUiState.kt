@@ -31,5 +31,9 @@ data class HomeUiState(
     val repeatPlates: Set<String> = emptySet(),
 
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+
+    val pendingOfflineCount: Int = 0,
+    val isOnline: Boolean = true,
+    val isSyncingOffline: Boolean = false
 )

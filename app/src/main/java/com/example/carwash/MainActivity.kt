@@ -11,12 +11,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.example.carwash.navigation.AppNavigation
+import com.example.carwash.repository.SaleRepository
 import com.example.carwash.ui.theme.CarwashTheme
 import com.example.carwash.utils.InAppUpdateManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var saleRepository: SaleRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

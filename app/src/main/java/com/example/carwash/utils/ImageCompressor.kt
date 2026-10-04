@@ -55,14 +55,19 @@ object ImageCompressor {
 
     private fun getRotationDegrees(context: Context, uri: Uri): Int {
         return try {
-            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-            if (pfd != null) {
-                val exifInterface = ExifInterface(pfd.fileDescriptor)
+            val filePath = if (uri.scheme == "file") uri.path else null
+            val exifInterface = if (filePath != null) {
+                ExifInterface(filePath)
+            } else {
+                context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                    ExifInterface(pfd.fileDescriptor)
+                }
+            }
+            if (exifInterface != null) {
                 val orientation = exifInterface.getAttributeInt(
                     ExifInterface.TAG_ORIENTATION,
                     ExifInterface.ORIENTATION_UNDEFINED
                 )
-                pfd.close()
                 when (orientation) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> 90
                     ExifInterface.ORIENTATION_ROTATE_180 -> 180
@@ -71,23 +76,8 @@ object ImageCompressor {
                 }
             } else 0
         } catch (e: Exception) {
-            try {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    val exifInterface = ExifInterface(stream)
-                    val orientation = exifInterface.getAttributeInt(
-                        ExifInterface.TAG_ORIENTATION,
-                        ExifInterface.ORIENTATION_UNDEFINED
-                    )
-                    when (orientation) {
-                        ExifInterface.ORIENTATION_ROTATE_90 -> 90
-                        ExifInterface.ORIENTATION_ROTATE_180 -> 180
-                        ExifInterface.ORIENTATION_ROTATE_270 -> 270
-                        else -> 0
-                    }
-                } ?: 0
-            } catch (_: Exception) {
-                0
-            }
+            Log.e("ImageCompressor", "getRotationDegrees error: ${e.message}")
+            0
         }
     }
 
@@ -99,16 +89,25 @@ object ImageCompressor {
 
         val options = BitmapFactory.Options()
         options.inJustDecodeBounds = true
-        context.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, options)
+
+        if (uri.scheme == "file" && uri.path != null) {
+            BitmapFactory.decodeFile(uri.path, options)
+        } else {
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, options)
+            }
         }
 
         options.inSampleSize = calculateSampleSize(options.outWidth, options.outHeight)
         options.inJustDecodeBounds = false
 
-        val decodedBitmap = context.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, options)
-        } ?: throw Exception("Unable to decode image")
+        val decodedBitmap = if (uri.scheme == "file" && uri.path != null) {
+            BitmapFactory.decodeFile(uri.path, options)
+        } else {
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, options)
+            }
+        } ?: throw Exception("Unable to decode image from $uri")
 
         var resultBitmap = decodedBitmap
 

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.carwash.BuildConfig
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
@@ -27,11 +28,21 @@ import com.google.android.gms.ads.LoadAdError
  * - Test Banner Unit ID: ca-app-pub-3940256099942544/6300978111
  * - Replace `adUnitId` with your Live AdMob Unit ID when building your final Production release.
  */
+const val TEST_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+const val PROD_BANNER_AD_UNIT_ID = "ca-app-pub-4394473472808077/1559107131"
+
+fun getBannerAdUnitId(): String {
+    return if (BuildConfig.DEBUG) {
+        TEST_BANNER_AD_UNIT_ID
+    } else {
+        PROD_BANNER_AD_UNIT_ID
+    }
+}
+
 @Composable
 fun AdBanner(
     modifier: Modifier = Modifier,
-    // Google Official Test Banner Ad Unit ID (Prevents accidental self-click bans during testing)
-    adUnitId: String = "ca-app-pub-4394473472808077/1559107131"
+    adUnitId: String = getBannerAdUnitId()
 ) {
     Card(
         modifier = modifier
@@ -63,7 +74,13 @@ fun AdBanner(
                                 Log.e("AdBanner", "AdMob Banner failed to load: ${error.message} (Code: ${error.code})")
                             }
                         }
-                        loadAd(AdRequest.Builder().build())
+                        try {
+                            loadAd(AdRequest.Builder().build())
+                        } catch (e: SecurityException) {
+                            Log.e("AdBanner", "SecurityException loading banner ad: ${e.message}", e)
+                        } catch (e: Exception) {
+                            Log.e("AdBanner", "Exception loading banner ad: ${e.message}", e)
+                        }
                     }
                 }
             )
