@@ -47,19 +47,23 @@ class FirebaseSaleRepository @Inject constructor(
         var paymentRef: StorageReference? = null
 
         return try {
-            val vehicleUri = requireNotNull(draft.vehicleImageUri) { "Vehicle image is required" }
+            val vehicleUri = draft.vehicleImageUri
 
             val (vehicleUrl, paymentUrl) = coroutineScope {
                 val vehicleDeferred = async {
-                    val compressedVehicleUri = try {
-                        ImageCompressor.compress(context, vehicleUri)
-                    } catch (e: Exception) {
-                        Log.e("FirebaseSaleRepository", "Vehicle image compression failed: ${e.message}")
-                        vehicleUri
+                    if (vehicleUri != null) {
+                        val compressedVehicleUri = try {
+                            ImageCompressor.compress(context, vehicleUri)
+                        } catch (e: Exception) {
+                            Log.e("FirebaseSaleRepository", "Vehicle image compression failed: ${e.message}")
+                            vehicleUri
+                        }
+                        val ref = createImageReference(userId = currentUser.uid, saleId = salesId, folder = "vehicle")
+                        vehicleRef = ref
+                        uploadImage(uri = compressedVehicleUri, reference = ref)
+                    } else {
+                        ""
                     }
-                    val ref = createImageReference(userId = currentUser.uid, saleId = salesId, folder = "vehicle")
-                    vehicleRef = ref
-                    uploadImage(uri = compressedVehicleUri, reference = ref)
                 }
 
                 val paymentDeferred = async {

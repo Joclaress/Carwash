@@ -7,7 +7,6 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
-import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -20,37 +19,38 @@ object ImageCompressor {
     private const val MAX_DIMENSION = 1200
 
     suspend fun compress(context: Context, sourceUri: Uri): Uri = withContext(Dispatchers.IO) {
-        val bitmap = decodeBitmap(context, sourceUri)
-        val bytes = compressBitmap(bitmap)
-        val folder = File(context.cacheDir, "compressed")
-
-        if (!folder.exists()) {
-            folder.mkdirs()
-        }
-
-        val output = File.createTempFile("compressed_", ".jpg", folder)
-
-        FileOutputStream(output).use {
-            it.write(bytes)
-        }
-
         try {
-            val exiOut = ExifInterface(output.absolutePath)
-            exiOut.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
-            exiOut.saveAttributes()
-        } catch (e: Exception) {
-            Log.e("ImageCompressor", "Error setting EXIF normal: ${e.message}")
-        }
-        
-        if (!bitmap.isRecycled) {
-            bitmap.recycle()
-        }
+            val bitmap = decodeBitmap(context, sourceUri)
+            val bytes = compressBitmap(bitmap)
+            val folder = File(context.cacheDir, "compressed")
 
-        FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            output
-        )
+            if (!folder.exists()) {
+                folder.mkdirs()
+            }
+
+            val output = File.createTempFile("compressed_", ".jpg", folder)
+
+            FileOutputStream(output).use {
+                it.write(bytes)
+            }
+
+            try {
+                val exiOut = ExifInterface(output.absolutePath)
+                exiOut.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+                exiOut.saveAttributes()
+            } catch (e: Exception) {
+                Log.e("ImageCompressor", "Error setting EXIF normal: ${e.message}")
+            }
+
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+
+            Uri.fromFile(output)
+        } catch (e: Exception) {
+            Log.e("ImageCompressor", "Failed to compress image, returning sourceUri: ${e.message}")
+            sourceUri
+        }
     }
 
     private fun getRotationDegrees(context: Context, uri: Uri): Int {
@@ -102,7 +102,7 @@ object ImageCompressor {
         context.contentResolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, options)
         }
-        
+
         options.inSampleSize = calculateSampleSize(options.outWidth, options.outHeight)
         options.inJustDecodeBounds = false
 
@@ -149,13 +149,13 @@ object ImageCompressor {
         val output = ByteArrayOutputStream()
 
         bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
-        
+
         while (output.size() > MAX_BYTES && quality > 30) {
             quality -= 10
             output.reset()
             bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
         }
-        
+
         return output.toByteArray()
     }
 }
