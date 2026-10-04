@@ -148,6 +148,8 @@ fun HomeScreenContent(
     onUpdateSale: (Sale) -> Unit = {}
 ) {
     var selectedSaleForDetails by remember { mutableStateOf<Sale?>(null) }
+    var isOwnerUnlocked by remember { mutableStateOf(false) }
+    var showOwnerAuthDialog by remember { mutableStateOf(false) }
 
     val filteredSales = remember(uiState.recentSales, uiState.selectedTeamFilter) {
         if (uiState.selectedTeamFilter.isNull_or_blank()) {
@@ -219,7 +221,9 @@ fun HomeScreenContent(
                             TeamSalesSection(
                                 teamSummaries = uiState.teamSalesSummaries,
                                 selectedTeamFilter = uiState.selectedTeamFilter,
-                                onSelectTeamFilter = onSelectTeamFilter
+                                onSelectTeamFilter = onSelectTeamFilter,
+                                isOwnerUnlocked = isOwnerUnlocked,
+                                onUnlockOwner = { showOwnerAuthDialog = true }
                             )
                         }
                     }
@@ -227,7 +231,8 @@ fun HomeScreenContent(
                         CommissionSection(
                             worker = uiState.todayWorkerCommision,
                             owner = uiState.todayOwnerShare,
-                            adminPassword = user?.effectiveAdminPassword ?: "admin123"
+                            isOwnerUnlocked = isOwnerUnlocked,
+                            onUnlockOwner = { showOwnerAuthDialog = true }
                         )
                     }
                     item {
@@ -284,6 +289,14 @@ fun HomeScreenContent(
                     }
                 }
             }
+        }
+
+        if (showOwnerAuthDialog) {
+            com.example.carwash.components.AdminAuthDialog(
+                adminPassword = user?.effectiveAdminPassword ?: "admin123",
+                onDismiss = { showOwnerAuthDialog = false },
+                onSuccess = { isOwnerUnlocked = true }
+            )
         }
 
         selectedSaleForDetails?.let { sale ->
@@ -486,7 +499,9 @@ private fun SalesSummaryCard(
 private fun TeamSalesSection(
     teamSummaries: List<TeamSalesSummary>,
     selectedTeamFilter: String?,
-    onSelectTeamFilter: (String?) -> Unit
+    onSelectTeamFilter: (String?) -> Unit,
+    isOwnerUnlocked: Boolean = false,
+    onUnlockOwner: () -> Unit = {}
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -520,6 +535,8 @@ private fun TeamSalesSection(
                     modifier = Modifier.width(200.dp),
                     summary = summary,
                     isSelected = isSelected,
+                    isOwnerUnlocked = isOwnerUnlocked,
+                    onUnlockOwner = onUnlockOwner,
                     onClick = {
                         onSelectTeamFilter(if (isSelected) null else summary.teamName)
                     }
@@ -534,6 +551,8 @@ private fun TeamSalesCard(
     modifier: Modifier = Modifier,
     summary: TeamSalesSummary,
     isSelected: Boolean,
+    isOwnerUnlocked: Boolean = false,
+    onUnlockOwner: () -> Unit = {},
     onClick: () -> Unit
 ) {
     val containerColor = if (isSelected) {
@@ -611,17 +630,31 @@ private fun TeamSalesCard(
                         color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Column(horizontalAlignment = Alignment.End) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = if (!isOwnerUnlocked) Modifier.clickable { onUnlockOwner() } else Modifier
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Owner",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
+                        )
+                        if (!isOwnerUnlocked) {
+                            Spacer(Modifier.width(2.dp))
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Locked",
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     Text(
-                        text = "Owner",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = formatCurrency(summary.todayOwnerShare),
+                        text = if (isOwnerUnlocked) formatCurrency(summary.todayOwnerShare) else "₱ • • • •",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        color = if (!isOwnerUnlocked) MaterialTheme.colorScheme.outline else if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -698,11 +731,10 @@ private fun QuickActionCard(
 private fun CommissionSection(
     worker: Double,
     owner: Double,
+    isOwnerUnlocked: Boolean = false,
+    onUnlockOwner: () -> Unit = {},
     adminPassword: String = "admin123"
 ) {
-    var isOwnerUnlocked by remember { mutableStateOf(false) }
-    var showOwnerAuthDialog by remember { mutableStateOf(false) }
-
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -725,17 +757,9 @@ private fun CommissionSection(
                 title = "Owner",
                 amount = owner,
                 isLocked = !isOwnerUnlocked,
-                onClickLocked = { showOwnerAuthDialog = true }
+                onClickLocked = onUnlockOwner
             )
         }
-    }
-
-    if (showOwnerAuthDialog) {
-        com.example.carwash.components.AdminAuthDialog(
-            adminPassword = adminPassword,
-            onDismiss = { showOwnerAuthDialog = false },
-            onSuccess = { isOwnerUnlocked = true }
-        )
     }
 }
 

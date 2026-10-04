@@ -231,15 +231,15 @@ class FirebaseSaleRepository @Inject constructor(
     }
 
     private suspend fun uploadImage(uri: Uri, reference: StorageReference): String {
-        try {
+        return try {
             Log.d("FirebaseSaleRepository", "Uploading image to: ${reference.path}")
             reference.putFile(uri).await()
             val downloadUrl = reference.downloadUrl.await().toString()
             Log.d("FirebaseSaleRepository", "Upload successful. Download URL: $downloadUrl")
-            return downloadUrl
+            downloadUrl
         } catch (e: Exception) {
-            Log.e("FirebaseSaleRepository", "Failed to upload image to ${reference.path}", e)
-            throw e
+            Log.e("FirebaseSaleRepository", "Failed to upload image to ${reference.path}: ${e.message}")
+            ""
         }
     }
 
