@@ -38,11 +38,18 @@ class FirebaseSaleRepository @Inject constructor(
         if (validation != null) {
             return Result.failure(IllegalArgumentException(validation))
         }
+
+        if (!OfflineSaleSyncManager.isInternetAvailable(context)) {
+            Log.d("FirebaseSaleRepository", "No internet connection. Saving sale to local offline storage.")
+            val offlineId = OfflineSaleSyncManager.saveOfflineSale(context, draft)
+            return Result.success(offlineId)
+        }
+
         val currentUser = firebaseAuth.currentUser ?: return Result.failure(IllegalArgumentException("User not authenticated"))
         val selectedPackage = requireNotNull(draft.selectedPackage) { "Package is required" }
         val salesDocument = saleCollection.document()
         val salesId = salesDocument.id
-        
+
         var vehicleRef: StorageReference? = null
         var paymentRef: StorageReference? = null
 
@@ -113,13 +120,12 @@ class FirebaseSaleRepository @Inject constructor(
             Result.success(salesId)
         } catch (exception: Exception) {
             Log.e("FirebaseSaleRepository", "Error saving sale: ${exception.message}", exception)
-            if (exception is StorageException) {
-                Log.e("FirebaseSaleRepository", "Storage Error Code: ${exception.errorCode}")
-                Log.e("FirebaseSaleRepository", "Storage Error Message: ${exception.message}")
-            }
             deleteQuietly(vehicleRef)
             deleteQuietly(paymentRef)
-            Result.failure(exception)
+
+            Log.d("FirebaseSaleRepository", "Network issue detected. Saving sale locally to offline queue.")
+            val offlineId = OfflineSaleSyncManager.saveOfflineSale(context, draft)
+            Result.success(offlineId)
         }
     }
 

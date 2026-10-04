@@ -2,15 +2,22 @@ package com.example.carwash
 
 import android.app.Application
 import android.util.Log
+import com.example.carwash.repository.OfflineSaleSyncManager
+import com.example.carwash.repository.SaleRepository
 import com.example.carwash.utils.BugReporter
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 @HiltAndroidApp
 class CarwashApplication : Application() {
+
+    @Inject
+    lateinit var saleRepository: SaleRepository
+
     override fun onCreate() {
         super.onCreate()
 
@@ -41,6 +48,13 @@ class CarwashApplication : Application() {
 
             MobileAds.initialize(this) { status ->
                 Log.d("CarwashApps", "AdMob MobileAds initialized successfully: $status")
+            }
+
+            // Start offline sale auto-sync connectivity listener
+            try {
+                OfflineSaleSyncManager.startAutoSyncOnConnectivity(this, saleRepository)
+            } catch (e: Exception) {
+                Log.e("CarwashApps", "Error starting offline sale sync listener: ${e.message}")
             }
 
             // Check for Google Play Services availability
