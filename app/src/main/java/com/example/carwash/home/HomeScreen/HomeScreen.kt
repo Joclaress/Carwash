@@ -837,12 +837,25 @@ private fun RecentSaleCard(
                     .size(width = 90.dp, height = 70.dp)
                     .clip(RoundedCornerShape(12.dp))
             ) {
-                AsyncImage(
-                    model = sale.vehicleImageUrl,
-                    contentDescription = "Vehicle Image",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (sale.vehicleImageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = coil3.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                            .data(sale.vehicleImageUrl)
+                            .build(),
+                        contentDescription = "Vehicle Image",
+                        placeholder = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
+                        error = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
+                        contentDescription = "Default Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(6.dp)
+                    )
+                }
             }
 
             Spacer(Modifier.width(12.dp))

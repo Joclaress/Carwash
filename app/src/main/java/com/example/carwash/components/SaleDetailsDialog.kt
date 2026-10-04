@@ -78,16 +78,30 @@ fun SaleDetailsDialog(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Vehicle Image Preview
-                if (sale.vehicleImageUrl.isNotBlank()) {
-                    Text(text = "Vehicle Photo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
-                    Card(shape = RoundedCornerShape(12.dp)) {
+                Text(text = "Vehicle Photo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                Card(shape = RoundedCornerShape(12.dp)) {
+                    if (sale.vehicleImageUrl.isNotBlank()) {
                         AsyncImage(
-                            model = sale.vehicleImageUrl,
+                            model = coil3.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(sale.vehicleImageUrl)
+                                .build(),
                             contentDescription = "Vehicle Photo",
+                            placeholder = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
+                            error = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(160.dp)
+                                .height(180.dp)
+                        )
+                    } else {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
+                            contentDescription = "Default Logo",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .padding(16.dp)
                         )
                     }
                 }
@@ -97,8 +111,12 @@ fun SaleDetailsDialog(
                     Text(text = "Money / Payment Proof Photo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     Card(shape = RoundedCornerShape(12.dp)) {
                         AsyncImage(
-                            model = sale.paymentImageUrl,
+                            model = coil3.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(sale.paymentImageUrl)
+                                .build(),
                             contentDescription = "Payment Proof",
+                            placeholder = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
+                            error = androidx.compose.ui.res.painterResource(id = com.example.carwash.R.drawable.app_logo),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
