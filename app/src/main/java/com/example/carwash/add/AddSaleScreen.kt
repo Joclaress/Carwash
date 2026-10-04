@@ -93,6 +93,14 @@ fun AddSaleScreen(
 
     LaunchedEffect(uiState.saveSaleId) {
         uiState.saveSaleId?.let {
+            val draft = uiState.draft
+            com.example.carwash.utils.NotificationHelper.showSaleAddedNotification(
+                context = context,
+                plateNumber = draft.plateNumber,
+                packageName = draft.selectedPackage?.name ?: "Carwash",
+                amount = draft.amount,
+                paymentMethod = draft.paymentMethod.name
+            )
             viewModel.resetForm()
             val activity = with(com.example.carwash.utils.InterstitialAdHelper) { context.findActivity() }
             com.example.carwash.utils.InterstitialAdHelper.showAdIfAvailable(activity) {
