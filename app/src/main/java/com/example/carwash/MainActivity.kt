@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.example.carwash.navigation.AppNavigation
 import com.example.carwash.ui.theme.CarwashTheme
+import com.example.carwash.utils.InAppUpdateManager
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -38,5 +39,10 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        InAppUpdateManager.checkForAppUpdate(this)
     }
 }

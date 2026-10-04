@@ -17,8 +17,8 @@ android {
         applicationId = "package.com.example.carwash"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "2.2"
+        versionCode = 14
+        versionName = "2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -87,6 +87,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.android.gms:play-services-ads:23.6.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
     implementation(libs.playAuth)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
     testImplementation(libs.junit)
