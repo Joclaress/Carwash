@@ -11,6 +11,8 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 
 /**
  * Safe & AdMob Policy-Compliant Interstitial Ad Helper
@@ -50,6 +52,18 @@ object InterstitialAdHelper {
     }
 
     fun loadAd(context: Context, adUnitId: String = getAdUnitId()) {
+        // Check Google Play Services availability first
+        try {
+            val availability = GoogleApiAvailability.getInstance()
+            if (availability.isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS) {
+                Log.w("InterstitialAdHelper", "Google Play Services not available. Skipping interstitial ad load.")
+                return
+            }
+        } catch (e: Exception) {
+            Log.e("InterstitialAdHelper", "Error checking GMS availability: ${e.message}")
+            return
+        }
+
         val now = System.currentTimeMillis()
         if (mInterstitialAd != null && (now - adLoadedTimestamp < AD_EXPIRATION_MS)) {
             Log.d("InterstitialAdHelper", "Ad already loaded and fresh. Skipping reload request.")
@@ -156,7 +170,17 @@ object InterstitialAdHelper {
                     Log.d("InterstitialAdHelper", "Interstitial Ad clicked by user.")
                 }
             }
-            ad.show(activity)
+            try {
+                ad.show(activity)
+            } catch (e: SecurityException) {
+                Log.e("InterstitialAdHelper", "SecurityException showing interstitial ad (GMS broker issue): ${e.message}", e)
+                mInterstitialAd = null
+                onAdDismissed()
+            } catch (e: Exception) {
+                Log.e("InterstitialAdHelper", "Exception showing interstitial ad: ${e.message}", e)
+                mInterstitialAd = null
+                onAdDismissed()
+            }
         } else {
             Log.d("InterstitialAdHelper", "No Interstitial Ad available. Preloading next ad and proceeding.")
             loadAd(activity)

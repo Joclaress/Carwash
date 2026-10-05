@@ -2,6 +2,7 @@ package com.example.carwash.model
 
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.carwash.add.AddSaleStep
@@ -25,17 +26,18 @@ import javax.inject.Inject
 @HiltViewModel
 class AddSaleViewModel @Inject constructor(
     private val saleRepository: SaleRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(AddSaleUiState())
-    val uiState = _uiState.asStateFlow()
 
     val packages: StateFlow<List<ServicePackage>> = settingsRepository.packages
     val vehicleSizes: StateFlow<List<String>> = settingsRepository.vehicleSizes
     val paymentMethods: List<PaymentMethod> = PaymentMethod.entries
     val teams: StateFlow<List<String>> = settingsRepository.teams
     val commissionRates: StateFlow<List<CommissionRateItem>> = settingsRepository.commissionRates
+
+    private val _uiState = MutableStateFlow(restoreInitialState())
+    val uiState: StateFlow<AddSaleUiState> = _uiState.asStateFlow()
 
     private var existingSales: List<Sale> = emptyList()
 
@@ -48,6 +50,97 @@ class AddSaleViewModel @Inject constructor(
                     checkRepeatCustomer(_uiState.value.draft.plateNumber)
                 }
         }
+
+        viewModelScope.launch {
+            packages.collect { packageList ->
+                val savedPackageId = savedStateHandle.get<String>(KEY_SELECTED_PACKAGE_ID)
+                if (savedPackageId != null && _uiState.value.draft.selectedPackage == null) {
+                    val foundPackage = packageList.find { it.id == savedPackageId }
+                    if (foundPackage != null) {
+                        updateDraft { draft -> draft.copy(selectedPackage = foundPackage) }
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            commissionRates.collect { rateList ->
+                val savedCommId = savedStateHandle.get<String>(KEY_COMMISSION_RATE_ID)
+                if (savedCommId != null) {
+                    val foundRate = rateList.find { it.id == savedCommId }
+                    if (foundRate != null) {
+                        updateDraft { draft -> draft.copy(selectedCommissionRate = foundRate) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun restoreInitialState(): AddSaleUiState {
+        val stepName = savedStateHandle.get<String>(KEY_CURRENT_STEP)
+        val restoredStep = stepName?.let { name ->
+            try { AddSaleStep.valueOf(name) } catch (_: Exception) { null }
+        } ?: AddSaleStep.VEHICLE_IMAGE
+
+        val savedVehicleUri = savedStateHandle.get<String>(KEY_VEHICLE_IMAGE_URI)?.let { Uri.parse(it) }
+        val savedPlate = savedStateHandle.get<String>(KEY_PLATE_NUMBER).orEmpty()
+        val savedTeam = savedStateHandle.get<String>(KEY_ASSIGNED_TEAM_NAME).orEmpty()
+        val savedPackageId = savedStateHandle.get<String>(KEY_SELECTED_PACKAGE_ID)
+        val savedSize = savedStateHandle.get<String>(KEY_SELECTED_VEHICLE_SIZE).orEmpty()
+        val savedCustomPrice = savedStateHandle.get<String>(KEY_CUSTOM_PRICE).orEmpty()
+        val savedCommId = savedStateHandle.get<String>(KEY_COMMISSION_RATE_ID)
+        val savedNotes = savedStateHandle.get<String>(KEY_NOTES).orEmpty()
+        val savedPaymentMethodName = savedStateHandle.get<String>(KEY_PAYMENT_METHOD)
+        val savedPaymentUri = savedStateHandle.get<String>(KEY_PAYMENT_IMAGE_URI)?.let { Uri.parse(it) }
+        val savedRefNum = savedStateHandle.get<String>(KEY_REFERENCE_NUMBER).orEmpty()
+        val savedCash = savedStateHandle.get<Double>(KEY_CASH_RECEIVED) ?: 0.0
+
+        val restoredPackage = savedPackageId?.let { id ->
+            packages.value.find { it.id == id }
+        }
+        val restoredCommRate = savedCommId?.let { id ->
+            commissionRates.value.find { it.id == id }
+        } ?: CommissionRateItem("FORTY", "40% (Default)", 0.40, 0.60)
+
+        val restoredPaymentMethod = savedPaymentMethodName?.let { name ->
+            try { PaymentMethod.valueOf(name) } catch (_: Exception) { null }
+        } ?: PaymentMethod.CASH
+
+        val restoredDraft = SaleDraft(
+            vehicleImageUri = savedVehicleUri,
+            plateNumber = savedPlate,
+            assignedTeamName = savedTeam,
+            selectedPackage = restoredPackage,
+            selectedVehicleSizeLabel = savedSize,
+            customPrice = savedCustomPrice,
+            selectedCommissionRate = restoredCommRate,
+            notes = savedNotes,
+            paymentMethod = restoredPaymentMethod,
+            paymentImageUri = savedPaymentUri,
+            referenceNumber = savedRefNum,
+            cashReceived = savedCash
+        )
+
+        return AddSaleUiState(
+            currentStep = restoredStep,
+            draft = restoredDraft
+        )
+    }
+
+    private fun saveStateToHandle(state: AddSaleUiState) {
+        savedStateHandle[KEY_CURRENT_STEP] = state.currentStep.name
+        savedStateHandle[KEY_VEHICLE_IMAGE_URI] = state.draft.vehicleImageUri?.toString()
+        savedStateHandle[KEY_PLATE_NUMBER] = state.draft.plateNumber
+        savedStateHandle[KEY_ASSIGNED_TEAM_NAME] = state.draft.assignedTeamName
+        savedStateHandle[KEY_SELECTED_PACKAGE_ID] = state.draft.selectedPackage?.id
+        savedStateHandle[KEY_SELECTED_VEHICLE_SIZE] = state.draft.selectedVehicleSizeLabel
+        savedStateHandle[KEY_CUSTOM_PRICE] = state.draft.customPrice
+        savedStateHandle[KEY_COMMISSION_RATE_ID] = state.draft.selectedCommissionRate.id
+        savedStateHandle[KEY_NOTES] = state.draft.notes
+        savedStateHandle[KEY_PAYMENT_METHOD] = state.draft.paymentMethod.name
+        savedStateHandle[KEY_PAYMENT_IMAGE_URI] = state.draft.paymentImageUri?.toString()
+        savedStateHandle[KEY_REFERENCE_NUMBER] = state.draft.referenceNumber
+        savedStateHandle[KEY_CASH_RECEIVED] = state.draft.cashReceived
     }
 
     fun setVehicleImage(uri: Uri?) {
@@ -81,7 +174,11 @@ class AddSaleViewModel @Inject constructor(
         val isRepeat = cleanPlate.isNotBlank() && existingSales.any {
             it.cleanPlateNumber == cleanPlate
         }
-        _uiState.update { it.copy(isRepeatCustomer = isRepeat) }
+        _uiState.update { state ->
+            val newState = state.copy(isRepeatCustomer = isRepeat)
+            saveStateToHandle(newState)
+            newState
+        }
     }
 
     fun selectTeam(teamName: String) {
@@ -193,11 +290,13 @@ class AddSaleViewModel @Inject constructor(
         }
 
         _uiState.update { state ->
-            state.copy(
+            val newState = state.copy(
                 currentStep = currentState.currentStep.next(),
                 errorMessage = null,
                 successMessage = null
             )
+            saveStateToHandle(newState)
+            newState
         }
     }
 
@@ -206,17 +305,21 @@ class AddSaleViewModel @Inject constructor(
         if (!currentState.canGoBack) return
 
         _uiState.update { state ->
-            state.copy(
+            val newState = state.copy(
                 currentStep = currentState.currentStep.previous(),
                 errorMessage = null,
                 successMessage = null
             )
+            saveStateToHandle(newState)
+            newState
         }
     }
 
     fun goToStep(step: AddSaleStep) {
         _uiState.update { state ->
-            state.copy(currentStep = step, errorMessage = null, successMessage = null)
+            val newState = state.copy(currentStep = step, errorMessage = null, successMessage = null)
+            saveStateToHandle(newState)
+            newState
         }
     }
 
@@ -232,12 +335,14 @@ class AddSaleViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _uiState.update { state ->
-                state.copy(
+                val newState = state.copy(
                     isSaving = true,
                     successMessage = null,
                     errorMessage = null,
                     saveSaleId = null
                 )
+                saveStateToHandle(newState)
+                newState
             }
 
             val result = saleRepository.saveSale(currentState.draft)
@@ -250,21 +355,25 @@ class AddSaleViewModel @Inject constructor(
                     "Sale saved successfully!"
                 }
                 _uiState.update { state ->
-                    state.copy(
+                    val newState = state.copy(
                         isSaving = false,
                         saveSaleId = saleId,
                         successMessage = message,
                         errorMessage = null
                     )
+                    saveStateToHandle(newState)
+                    newState
                 }
             }.onFailure { exception ->
                 _uiState.update { state ->
-                    state.copy(
+                    val newState = state.copy(
                         isSaving = false,
                         saveSaleId = null,
                         successMessage = null,
                         errorMessage = "Failed to save sale: ${exception.message}"
                     )
+                    saveStateToHandle(newState)
+                    newState
                 }
             }
         }
@@ -272,21 +381,29 @@ class AddSaleViewModel @Inject constructor(
 
     fun clearMessage() {
         _uiState.update { state ->
-            state.copy(errorMessage = null, successMessage = null)
+            val newState = state.copy(errorMessage = null, successMessage = null)
+            saveStateToHandle(newState)
+            newState
         }
     }
 
     fun resetForm() {
+        savedStateHandle.keys().forEach { key ->
+            savedStateHandle.remove<Any>(key)
+        }
         _uiState.value = AddSaleUiState()
     }
 
     private fun updateDraft(transform: (SaleDraft) -> SaleDraft) {
         _uiState.update { state ->
-            state.copy(
-                draft = transform(state.draft),
+            val newDraft = transform(state.draft)
+            val newState = state.copy(
+                draft = newDraft,
                 errorMessage = null,
                 successMessage = null
             )
+            saveStateToHandle(newState)
+            newState
         }
     }
 
@@ -315,7 +432,9 @@ class AddSaleViewModel @Inject constructor(
 
     private fun showError(message: String) {
         _uiState.update { state ->
-            state.copy(errorMessage = message, successMessage = null)
+            val newState = state.copy(errorMessage = message, successMessage = null)
+            saveStateToHandle(newState)
+            newState
         }
     }
 
@@ -335,12 +454,6 @@ class AddSaleViewModel @Inject constructor(
         return "$wholeNumber.$decimalNumber"
     }
 
-    private companion object {
-        const val MAX_NOTES_LENGTH = 500
-        const val MAX_REFERENCE_NUMBER_LENGTH = 50
-        const val MAX_AMOUNT_LENGTH = 9
-    }
-
     fun selectCommissionRate(
         rate: CommissionRateItem
     ) {
@@ -349,5 +462,25 @@ class AddSaleViewModel @Inject constructor(
                 selectedCommissionRate = rate
             )
         }
+    }
+
+    private companion object {
+        const val KEY_CURRENT_STEP = "key_current_step"
+        const val KEY_VEHICLE_IMAGE_URI = "key_vehicle_image_uri"
+        const val KEY_PLATE_NUMBER = "key_plate_number"
+        const val KEY_ASSIGNED_TEAM_NAME = "key_assigned_team_name"
+        const val KEY_SELECTED_PACKAGE_ID = "key_selected_package_id"
+        const val KEY_SELECTED_VEHICLE_SIZE = "key_selected_vehicle_size"
+        const val KEY_CUSTOM_PRICE = "key_custom_price"
+        const val KEY_COMMISSION_RATE_ID = "key_commission_rate_id"
+        const val KEY_NOTES = "key_notes"
+        const val KEY_PAYMENT_METHOD = "key_payment_method"
+        const val KEY_PAYMENT_IMAGE_URI = "key_payment_image_uri"
+        const val KEY_REFERENCE_NUMBER = "key_reference_number"
+        const val KEY_CASH_RECEIVED = "key_cash_received"
+
+        const val MAX_NOTES_LENGTH = 500
+        const val MAX_REFERENCE_NUMBER_LENGTH = 50
+        const val MAX_AMOUNT_LENGTH = 9
     }
 }

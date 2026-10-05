@@ -15,10 +15,22 @@
         <package android:name="com.google.android.gms" />
         <package android:name="com.android.vending" />
         <intent>
+            <action android:name="com.google.android.gms.ads.service.START" />
+        </intent>
+        <intent>
             <action android:name="com.google.android.gms.ads.AdService" />
         </intent>
         <intent>
             <action android:name="com.google.android.gms.auth.service.START" />
+        </intent>
+        <intent>
+            <action android:name="com.google.android.gms.auth.api.signin.service.START" />
+        </intent>
+        <intent>
+            <action android:name="com.google.android.play.core.appupdate.protocol.IAppUpdateService" />
+        </intent>
+        <intent>
+            <action android:name="com.google.android.gms.common.telemetry.service.START" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />

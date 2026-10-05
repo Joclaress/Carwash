@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import com.example.carwash.BuildConfig
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.appupdate.AppUpdateOptions
@@ -16,6 +17,13 @@ object InAppUpdateManager {
     private const val REQUEST_CODE_FORCE_UPDATE = 8888
 
     fun checkForAppUpdate(activity: Activity) {
+        // In-app update requires installation via Google Play Store.
+        // Skip in Debug builds to avoid GMS broker SecurityExceptions on emulators/local debug runs.
+        if (BuildConfig.DEBUG) {
+            Log.d("InAppUpdateManager", "Skipping in-app update check in debug build.")
+            return
+        }
+
         try {
             val appUpdateManager: AppUpdateManager = AppUpdateManagerFactory.create(activity)
             val appUpdateInfoTask = appUpdateManager.appUpdateInfo

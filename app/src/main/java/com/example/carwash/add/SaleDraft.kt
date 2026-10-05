@@ -102,22 +102,21 @@ data class SaleDraft(
             PaymentMethod.CASH -> {
                 when {
                     cashReceived <= 0.0 -> "Please enter the cash received."
-                    cashReceivedAmount < amount -> "Cash received is less than the amount."
-                    paymentImageUri == null -> "Please add a photo of the cash received."
+                    cashReceivedAmount < amount -> "Cash received is less than the total amount."
                     else -> null
                 }
             }
             PaymentMethod.Gcash -> {
                 when {
-                    referenceNumber.isBlank() -> "Please enter a Gcash reference number."
-                    paymentImageUri == null -> "Please add a photo of the payment."
+                    referenceNumber.isBlank() -> "Please enter a GCash reference number."
+                    paymentImageUri == null -> "Please add a photo of the payment proof."
                     else -> null
                 }
             }
             PaymentMethod.BANK_TRANSFER -> {
                 when {
                     referenceNumber.isBlank() -> "Please enter a bank transfer reference number."
-                    paymentImageUri == null -> "Please add a photo of the payment."
+                    paymentImageUri == null -> "Please add a photo of the payment receipt."
                     else -> null
                 }
             }
