@@ -17,8 +17,8 @@ android {
         applicationId = "package.com.example.carwash"
         minSdk = 24
         targetSdk = 36
-        versionCode = 21
-        versionName = "3.0"
+        versionCode = 22
+        versionName = "3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,7 +34,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -1,8 +1,10 @@
-# Keep all application code from R8 obfuscation
--keep class com.example.carwash.** { *; }
--keepclassmembers class com.example.carwash.** { *; }
--keep class package.com.example.carwash.** { *; }
--keepclassmembers class package.com.example.carwash.** { *; }
+# R8 / ProGuard Configuration for Carwash App
+
+# Keep Data & Entity Models used by Firebase/Firestore/JSON Serialization
+-keep class com.example.carwash.model.** { *; }
+-keepclassmembers class com.example.carwash.model.** { *; }
+-keep class com.example.carwash.add.Sale { *; }
+-keep class com.example.carwash.add.SaleDraft { *; }
 
 # Keep Firebase Models & Firestore Deserialization
 -keep class com.google.firebase.** { *; }
@@ -12,7 +14,16 @@
     @com.google.firebase.firestore.IgnoreExtraProperties *;
 }
 
-# Keep Hilt Dependency Injection
+# Keep Kotlinx Serialization
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keepclassmembers class * {
+    @kotlinx.serialization.Serializable *;
+}
+-keepclassmembers class * {
+    *** Companion;
+}
+
+# Keep Hilt Dependency Injection & ViewModels
 -keep class * extends androidx.lifecycle.ViewModel
 -keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
 
@@ -21,6 +32,3 @@
 
 # Keep AdMob
 -keep class com.google.android.gms.ads.** { *; }
-
-# Keep Kotlin Attributes & Annotations
--keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
