@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -24,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.example.carwash.utils.ImageCompressor
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -36,31 +40,56 @@ fun CameraCaptureBox(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var pendingUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Preserve pendingUri across Activity recreation when Camera app opens
+    var pendingUriStr by rememberSaveable { mutableStateOf<String?>(null) }
     var compressing by remember { mutableStateOf(false) }
+    var isLaunchingCamera by remember { mutableStateOf(false) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) {
-            pendingUri?.let { captured ->
-                coroutineScope.launch {
-                    try {
-                        compressing = true
-                        val compressed = ImageCompressor.compress(context, captured)
-                        onImageCaptured(compressed)
-                    } finally {
-                        compressing = false
-                    }
+        isLaunchingCamera = false
+        val capturedUriStr = pendingUriStr
+        val capturedUri = capturedUriStr?.let { Uri.parse(it) }
+
+        if (success && capturedUri != null) {
+            coroutineScope.launch {
+                try {
+                    compressing = true
+                    // Give a brief delay if file write is finalizing
+                    delay(100)
+                    val compressed = ImageCompressor.compress(context, capturedUri)
+                    onImageCaptured(compressed)
+                } catch (e: Exception) {
+                    Log.e("CameraCaptureBox", "Error compressing image: ${e.message}", e)
+                    // Fallback to captured Uri directly
+                    onImageCaptured(capturedUri)
+                } finally {
+                    compressing = false
+                    pendingUriStr = null
                 }
             }
+        } else {
+            Log.w("CameraCaptureBox", "Camera capture cancelled or failed. success=$success, uri=$capturedUriStr")
+            isLaunchingCamera = false
+            compressing = false
+            pendingUriStr = null
         }
     }
 
     fun openCamera() {
-        val uri = createCameraUri(context)
-        pendingUri = uri
-        cameraLauncher.launch(uri)
+        if (isLaunchingCamera || compressing) return
+        try {
+            isLaunchingCamera = true
+            val uri = createCameraUri(context)
+            pendingUriStr = uri.toString()
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            isLaunchingCamera = false
+            Log.e("CameraCaptureBox", "Failed to launch camera: ${e.message}", e)
+            Toast.makeText(context, "Could not open camera: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -68,6 +97,8 @@ fun CameraCaptureBox(
     ) { isGranted ->
         if (isGranted) {
             openCamera()
+        } else {
+            Toast.makeText(context, "Camera permission is required to take photos", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -81,7 +112,7 @@ fun CameraCaptureBox(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(170.dp)
-                .clickable {
+                .clickable(enabled = !compressing && !isLaunchingCamera) {
                     val granted = ContextCompat.checkSelfPermission(
                         context,
                         Manifest.permission.CAMERA
@@ -101,7 +132,7 @@ fun CameraCaptureBox(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(8.dp))
-                            Text("Compressing image...", style = MaterialTheme.typography.bodySmall)
+                            Text("Processing image...", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     imageUri == null -> {
@@ -129,7 +160,7 @@ fun CameraCaptureBox(
                         Box {
                             AsyncImage(
                                 model = imageUri,
-                                contentDescription = null,
+                                contentDescription = "Captured Photo",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
@@ -147,7 +178,8 @@ fun CameraCaptureBox(
                                 onClick = { openCamera() },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(8.dp)
+                                    .padding(8.dp),
+                                enabled = !compressing && !isLaunchingCamera
                             ) {
                                 Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
@@ -166,7 +198,12 @@ private fun createCameraUri(context: Context): Uri {
     if (!folder.exists()) {
         folder.mkdirs()
     }
-    val file = File.createTempFile("capture_", ".jpg", folder)
+    // Unique timestamped file to avoid cache conflicts or overwriting
+    val file = File(folder, "capture_${System.currentTimeMillis()}.jpg")
+    if (file.exists()) {
+        file.delete()
+    }
+    file.createNewFile()
     return FileProvider.getUriForFile(
         context,
         "${context.packageName}.fileprovider",
