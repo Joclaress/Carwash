@@ -17,8 +17,8 @@ android {
         applicationId = "package.com.example.carwash"
         minSdk = 24
         targetSdk = 36
-        versionCode = 22
-        versionName = "3.1"
+        versionCode = 23
+        versionName = "3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

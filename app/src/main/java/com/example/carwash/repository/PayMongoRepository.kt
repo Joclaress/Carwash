@@ -108,8 +108,35 @@ class PayMongoRepository @Inject constructor(
                     mapOf(
                         "isSubscriptionActive" to true,
                         "subscriptionActive" to true,
+                        "isTrialExpired" to false,
+                        "trialExpired" to false,
                         "subscriptionPaidAt" to now,
                         "subscriptionExpiresAt" to (now + thirtyDaysMillis)
+                    )
+                )
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun activateUnlimitedSubscription(): Result<Unit> {
+        return try {
+            val user = auth.currentUser ?: return Result.failure(IllegalStateException("User not authenticated"))
+            val now = System.currentTimeMillis()
+
+            firestore.collection("users")
+                .document(user.uid)
+                .update(
+                    mapOf(
+                        "isSubscriptionActive" to true,
+                        "subscriptionActive" to true,
+                        "isTrialExpired" to false,
+                        "trialExpired" to false,
+                        "subscriptionPaidAt" to now,
+                        "subscriptionExpiresAt" to 0L
                     )
                 )
                 .await()

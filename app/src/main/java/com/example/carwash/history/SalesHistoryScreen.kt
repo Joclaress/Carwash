@@ -262,6 +262,15 @@ private fun HistoryFilters(
 
         item {
             SalesFilterChip(
+                title = "Last Week",
+                filter = SalesFilter.LAST_WEEK,
+                selected = selected,
+                onSelected = onSelected
+            )
+        }
+
+        item {
+            SalesFilterChip(
                 title = "This Month",
                 filter = SalesFilter.THIS_MONTH,
                 selected = selected,

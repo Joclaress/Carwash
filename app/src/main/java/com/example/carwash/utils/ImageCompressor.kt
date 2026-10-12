@@ -12,24 +12,34 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.max
 
 object ImageCompressor {
 
-    private const val MAX_BYTES = 250 * 1024
+    private const val MAX_BYTES = 300 * 1024
     private const val MAX_DIMENSION = 1200
 
     suspend fun compress(context: Context, sourceUri: Uri): Uri = withContext(Dispatchers.IO) {
         try {
             val bitmap = decodeBitmap(context, sourceUri)
-            val bytes = compressBitmap(bitmap)
-            val folder = File(context.cacheDir, "compressed")
+                ?: return@withContext sourceUri
 
+            val bytes = compressBitmap(bitmap)
+
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+
+            if (bytes.isEmpty()) {
+                return@withContext sourceUri
+            }
+
+            val folder = File(context.cacheDir, "compressed")
             if (!folder.exists()) {
                 folder.mkdirs()
             }
 
             val output = File.createTempFile("compressed_", ".jpg", folder)
-
             FileOutputStream(output).use {
                 it.write(bytes)
             }
@@ -38,17 +48,13 @@ object ImageCompressor {
                 val exiOut = ExifInterface(output.absolutePath)
                 exiOut.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
                 exiOut.saveAttributes()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e("ImageCompressor", "Error setting EXIF normal: ${e.message}")
             }
 
-            if (!bitmap.isRecycled) {
-                bitmap.recycle()
-            }
-
             Uri.fromFile(output)
-        } catch (e: Exception) {
-            Log.e("ImageCompressor", "Failed to compress image, returning sourceUri: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("ImageCompressor", "Failed to compress image, returning sourceUri: ${t.message}", t)
             sourceUri
         }
     }
@@ -75,8 +81,8 @@ object ImageCompressor {
                     else -> 0
                 }
             } else 0
-        } catch (e: Exception) {
-            Log.e("ImageCompressor", "getRotationDegrees error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("ImageCompressor", "getRotationDegrees error: ${t.message}")
             0
         }
     }
@@ -84,52 +90,66 @@ object ImageCompressor {
     private fun decodeBitmap(
         context: Context,
         uri: Uri
-    ): Bitmap {
-        val rotationDegrees = getRotationDegrees(context, uri)
+    ): Bitmap? {
+        return try {
+            val rotationDegrees = getRotationDegrees(context, uri)
 
-        val options = BitmapFactory.Options()
-        options.inJustDecodeBounds = true
-
-        if (uri.scheme == "file" && uri.path != null) {
-            BitmapFactory.decodeFile(uri.path, options)
-        } else {
-            context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, options)
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
             }
+
+            if (uri.scheme == "file" && uri.path != null) {
+                BitmapFactory.decodeFile(uri.path, options)
+            } else {
+                context.contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, options)
+                }
+            }
+
+            val outW = max(options.outWidth, 1)
+            val outH = max(options.outHeight, 1)
+
+            options.inSampleSize = calculateSampleSize(outW, outH)
+            options.inJustDecodeBounds = false
+            options.inPreferredConfig = Bitmap.Config.RGB_565
+
+            val decodedBitmap = if (uri.scheme == "file" && uri.path != null) {
+                BitmapFactory.decodeFile(uri.path, options)
+            } else {
+                context.contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, options)
+                }
+            } ?: return null
+
+            var resultBitmap = decodedBitmap
+
+            if (rotationDegrees != 0) {
+                val matrix = Matrix()
+                matrix.postRotate(rotationDegrees.toFloat())
+                try {
+                    val rotated = Bitmap.createBitmap(
+                        decodedBitmap,
+                        0,
+                        0,
+                        decodedBitmap.width,
+                        decodedBitmap.height,
+                        matrix,
+                        true
+                    )
+                    if (rotated != decodedBitmap) {
+                        decodedBitmap.recycle()
+                    }
+                    resultBitmap = rotated
+                } catch (t: Throwable) {
+                    Log.e("ImageCompressor", "Rotation failed due to memory, using unrotated bitmap: ${t.message}")
+                }
+            }
+
+            resultBitmap
+        } catch (t: Throwable) {
+            Log.e("ImageCompressor", "decodeBitmap error: ${t.message}", t)
+            null
         }
-
-        options.inSampleSize = calculateSampleSize(options.outWidth, options.outHeight)
-        options.inJustDecodeBounds = false
-
-        val decodedBitmap = if (uri.scheme == "file" && uri.path != null) {
-            BitmapFactory.decodeFile(uri.path, options)
-        } else {
-            context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, options)
-            }
-        } ?: throw Exception("Unable to decode image from $uri")
-
-        var resultBitmap = decodedBitmap
-
-        if (rotationDegrees != 0) {
-            val matrix = Matrix()
-            matrix.postRotate(rotationDegrees.toFloat())
-            val rotated = Bitmap.createBitmap(
-                decodedBitmap,
-                0,
-                0,
-                decodedBitmap.width,
-                decodedBitmap.height,
-                matrix,
-                true
-            )
-            if (rotated != decodedBitmap) {
-                decodedBitmap.recycle()
-            }
-            resultBitmap = rotated
-        }
-
-        return resultBitmap
     }
 
     private fun calculateSampleSize(
@@ -137,22 +157,28 @@ object ImageCompressor {
         height: Int
     ): Int {
         var sample = 1
-        while (width / sample > MAX_DIMENSION || height / sample > MAX_DIMENSION) {
+        val w = max(width, 1)
+        val h = max(height, 1)
+        while (w / sample > MAX_DIMENSION || h / sample > MAX_DIMENSION) {
             sample *= 2
         }
-        return sample
+        return max(sample, 1)
     }
 
     private fun compressBitmap(bitmap: Bitmap): ByteArray {
         var quality = 80
         val output = ByteArrayOutputStream()
 
-        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
-
-        while (output.size() > MAX_BYTES && quality > 30) {
-            quality -= 10
-            output.reset()
+        try {
             bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
+
+            while (output.size() > MAX_BYTES && quality > 30) {
+                quality -= 10
+                output.reset()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
+            }
+        } catch (t: Throwable) {
+            Log.e("ImageCompressor", "compressBitmap error: ${t.message}")
         }
 
         return output.toByteArray()

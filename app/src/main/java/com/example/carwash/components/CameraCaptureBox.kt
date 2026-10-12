@@ -57,13 +57,11 @@ fun CameraCaptureBox(
             coroutineScope.launch {
                 try {
                     compressing = true
-                    // Give a brief delay if file write is finalizing
                     delay(100)
                     val compressed = ImageCompressor.compress(context, capturedUri)
                     onImageCaptured(compressed)
-                } catch (e: Exception) {
-                    Log.e("CameraCaptureBox", "Error compressing image: ${e.message}", e)
-                    // Fallback to captured Uri directly
+                } catch (t: Throwable) {
+                    Log.e("CameraCaptureBox", "Error compressing image: ${t.message}", t)
                     onImageCaptured(capturedUri)
                 } finally {
                     compressing = false
@@ -85,10 +83,11 @@ fun CameraCaptureBox(
             val uri = createCameraUri(context)
             pendingUriStr = uri.toString()
             cameraLauncher.launch(uri)
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             isLaunchingCamera = false
-            Log.e("CameraCaptureBox", "Failed to launch camera: ${e.message}", e)
-            Toast.makeText(context, "Could not open camera: ${e.message}", Toast.LENGTH_SHORT).show()
+            pendingUriStr = null
+            Log.e("CameraCaptureBox", "Failed to launch camera: ${t.message}", t)
+            Toast.makeText(context, "Could not open camera: ${t.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -198,7 +197,6 @@ private fun createCameraUri(context: Context): Uri {
     if (!folder.exists()) {
         folder.mkdirs()
     }
-    // Unique timestamped file to avoid cache conflicts or overwriting
     val file = File(folder, "capture_${System.currentTimeMillis()}.jpg")
     if (file.exists()) {
         file.delete()

@@ -7,6 +7,7 @@ enum class SalesFilter {
     TODAY,
     YESTERDAY,
     THIS_WEEK,
+    LAST_WEEK,
     THIS_MONTH
 }
 
