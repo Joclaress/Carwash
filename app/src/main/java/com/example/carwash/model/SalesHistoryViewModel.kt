@@ -163,8 +163,22 @@ class SalesHistoryViewModel @Inject constructor(
                 sameDay(saleCalendar, yesterday)
             }
             SalesFilter.THIS_WEEK -> {
-                saleCalendar.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
-                        saleCalendar.get(Calendar.WEEK_OF_YEAR) == today.get(Calendar.WEEK_OF_YEAR)
+                val mondayStart = Calendar.getInstance().apply {
+                    firstDayOfWeek = Calendar.MONDAY
+                    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val sundayEnd = (mondayStart.clone() as Calendar).apply {
+                    add(Calendar.DAY_OF_WEEK, 6)
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }
+                date.time >= mondayStart.timeInMillis && date.time <= sundayEnd.timeInMillis
             }
             SalesFilter.THIS_MONTH -> {
                 saleCalendar.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
