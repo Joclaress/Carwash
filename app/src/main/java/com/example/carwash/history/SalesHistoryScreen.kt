@@ -257,15 +257,6 @@ private fun HistoryFilters(
     ) {
         item {
             SalesFilterChip(
-                title = "All",
-                filter = SalesFilter.ALL,
-                selected = selected,
-                onSelected = onSelected
-            )
-        }
-
-        item {
-            SalesFilterChip(
                 title = "Today",
                 filter = SalesFilter.TODAY,
                 selected = selected,
@@ -313,6 +304,15 @@ private fun HistoryFilters(
             SalesFilterChip(
                 title = "Last Month",
                 filter = SalesFilter.LAST_MONTH,
+                selected = selected,
+                onSelected = onSelected
+            )
+        }
+
+        item {
+            SalesFilterChip(
+                title = "All",
+                filter = SalesFilter.ALL,
                 selected = selected,
                 onSelected = onSelected
             )

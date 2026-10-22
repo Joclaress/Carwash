@@ -15,7 +15,7 @@ enum class SalesFilter {
 data class SalesHistoryUiState(
     val sales: List<Sale> = emptyList(),
     val filteredSales: List<Sale> = emptyList(),
-    val selectedFilter: SalesFilter = SalesFilter.ALL,
+    val selectedFilter: SalesFilter = SalesFilter.TODAY,
     val searchQuery: String = "",
     val totalSales: Double = 0.0,
     val cashSales: Double = 0.0,
