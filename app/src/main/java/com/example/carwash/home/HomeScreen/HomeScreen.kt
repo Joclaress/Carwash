@@ -285,12 +285,11 @@ fun HomeScreenContent(
                             items = filteredSales,
                             key = { it.id }
                         ) { sale ->
-                            val visitCount = uiState.repeatPlateCounts[sale.cleanPlateNumber] ?: 1
-                            val isRepeat = visitCount > 1 || (sale.plateNumber.isNotBlank() && sale.cleanPlateNumber in uiState.repeatPlates)
+                            val isRepeat = sale.plateNumber.isNotBlank() &&
+                                    sale.cleanPlateNumber in uiState.repeatPlates
                             RecentSaleCard(
                                 sale = sale,
                                 isRepeatCustomer = isRepeat,
-                                visitCount = visitCount,
                                 onClick = { selectedSaleForDetails = sale }
                             )
                         }
@@ -314,12 +313,11 @@ fun HomeScreenContent(
         }
 
         selectedSaleForDetails?.let { sale ->
-            val visitCount = uiState.repeatPlateCounts[sale.cleanPlateNumber] ?: 1
-            val isRepeat = visitCount > 1 || (sale.plateNumber.isNotBlank() && sale.cleanPlateNumber in uiState.repeatPlates)
+            val isRepeat = sale.plateNumber.isNotBlank() &&
+                    sale.cleanPlateNumber in uiState.repeatPlates
             SaleDetailsDialog(
                 sale = sale,
                 isRepeatCustomer = isRepeat,
-                visitCount = visitCount,
                 adminPassword = user?.effectiveAdminPassword ?: "admin123",
                 onDismiss = { selectedSaleForDetails = null },
                 onDeleteSale = { target ->
@@ -831,7 +829,6 @@ private fun CommisionCard(
 private fun RecentSaleCard(
     sale: Sale,
     isRepeatCustomer: Boolean = false,
-    visitCount: Int = 1,
     onClick: () -> Unit = {}
 ) {
     Card(
@@ -881,15 +878,14 @@ private fun RecentSaleCard(
                         text = sale.packageName.ifBlank { "Carwash" },
                         fontWeight = FontWeight.Bold
                     )
-                    if (isRepeatCustomer || visitCount > 1) {
+                    if (isRepeatCustomer) {
                         Spacer(Modifier.width(6.dp))
                         Surface(
                             color = MaterialTheme.colorScheme.tertiaryContainer,
                             shape = RoundedCornerShape(100.dp)
                         ) {
-                            val badgeLabel = if (visitCount > 1) "Repeat (x$visitCount)" else "Repeat"
                             Text(
-                                text = badgeLabel,
+                                text = "Repeat",
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
