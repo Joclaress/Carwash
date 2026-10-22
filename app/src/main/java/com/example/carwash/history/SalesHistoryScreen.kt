@@ -68,7 +68,19 @@ fun SalesHistoryScreen(
     val user by authViewModel.user.collectAsState()
     var selectedSaleForDetails by remember { mutableStateOf<Sale?>(null) }
     var isOwnerUnlocked by remember { mutableStateOf(false) }
+    var isCarwashBoyUnlocked by remember { mutableStateOf(false) }
     var showOwnerAuthDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.example.carwash.utils.RewardedAdHelper.loadAd(context)
+    }
+
+    val onUnlockCarwashBoy = {
+        com.example.carwash.utils.RewardedAdHelper.showRewardedAd(context) {
+            isCarwashBoyUnlocked = true
+        }
+    }
 
     val isSensitiveFilter = uiState.selectedFilter == SalesFilter.THIS_MONTH ||
                             uiState.selectedFilter == SalesFilter.LAST_MONTH ||
@@ -158,7 +170,9 @@ fun SalesHistoryScreen(
                             owner = uiState.ownerShare,
                             average = uiState.averageSale,
                             isLocked = isLocked,
-                            onClickLocked = { showOwnerAuthDialog = true }
+                            isCarwashBoyUnlocked = isCarwashBoyUnlocked,
+                            onClickLocked = { showOwnerAuthDialog = true },
+                            onUnlockCarwashBoy = onUnlockCarwashBoy
                         )
                     }
 
@@ -344,7 +358,9 @@ private fun HistorySummary(
     owner: Double,
     average: Double,
     isLocked: Boolean = false,
-    onClickLocked: () -> Unit = {}
+    isCarwashBoyUnlocked: Boolean = false,
+    onClickLocked: () -> Unit = {},
+    onUnlockCarwashBoy: () -> Unit = {}
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -388,9 +404,15 @@ private fun HistorySummary(
                 modifier = Modifier.weight(1f),
                 title = "Carwash Boy",
                 amount = worker,
-                subtitle = if (isLocked) "Tap to Unlock" else "Commission",
-                isLocked = isLocked,
-                onClickLocked = onClickLocked
+                subtitle = if (isLocked) "Tap to Unlock" else if (isCarwashBoyUnlocked) "Commission" else "Watch Ad to View 🎬",
+                isLocked = isLocked || !isCarwashBoyUnlocked,
+                onClickLocked = {
+                    if (isLocked) {
+                        onClickLocked()
+                    } else if (!isCarwashBoyUnlocked) {
+                        onUnlockCarwashBoy()
+                    }
+                }
             )
 
             HistorySummaryCard(

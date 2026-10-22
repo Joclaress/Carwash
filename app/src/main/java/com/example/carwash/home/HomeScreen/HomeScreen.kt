@@ -153,7 +153,19 @@ fun HomeScreenContent(
 ) {
     var selectedSaleForDetails by remember { mutableStateOf<Sale?>(null) }
     var isOwnerUnlocked by remember { mutableStateOf(false) }
+    var isCarwashBoyUnlocked by remember { mutableStateOf(false) }
     var showOwnerAuthDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.example.carwash.utils.RewardedAdHelper.loadAd(context)
+    }
+
+    val onUnlockCarwashBoy = {
+        com.example.carwash.utils.RewardedAdHelper.showRewardedAd(context) {
+            isCarwashBoyUnlocked = true
+        }
+    }
 
     val filteredSales = remember(uiState.recentSales, uiState.selectedTeamFilter) {
         if (uiState.selectedTeamFilter.isNull_or_blank()) {
@@ -241,7 +253,9 @@ fun HomeScreenContent(
                                 selectedTeamFilter = uiState.selectedTeamFilter,
                                 onSelectTeamFilter = onSelectTeamFilter,
                                 isOwnerUnlocked = isOwnerUnlocked,
-                                onUnlockOwner = { showOwnerAuthDialog = true }
+                                onUnlockOwner = { showOwnerAuthDialog = true },
+                                isCarwashBoyUnlocked = isCarwashBoyUnlocked,
+                                onUnlockCarwashBoy = onUnlockCarwashBoy
                             )
                         }
                     }
@@ -250,7 +264,9 @@ fun HomeScreenContent(
                             worker = uiState.todayWorkerCommision,
                             owner = uiState.todayOwnerShare,
                             isOwnerUnlocked = isOwnerUnlocked,
-                            onUnlockOwner = { showOwnerAuthDialog = true }
+                            onUnlockOwner = { showOwnerAuthDialog = true },
+                            isCarwashBoyUnlocked = isCarwashBoyUnlocked,
+                            onUnlockCarwashBoy = onUnlockCarwashBoy
                         )
                     }
                     item {
@@ -568,7 +584,9 @@ private fun TeamSalesSection(
     selectedTeamFilter: String?,
     onSelectTeamFilter: (String?) -> Unit,
     isOwnerUnlocked: Boolean = false,
-    onUnlockOwner: () -> Unit = {}
+    onUnlockOwner: () -> Unit = {},
+    isCarwashBoyUnlocked: Boolean = false,
+    onUnlockCarwashBoy: () -> Unit = {}
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -604,6 +622,8 @@ private fun TeamSalesSection(
                     isSelected = isSelected,
                     isOwnerUnlocked = isOwnerUnlocked,
                     onUnlockOwner = onUnlockOwner,
+                    isCarwashBoyUnlocked = isCarwashBoyUnlocked,
+                    onUnlockCarwashBoy = onUnlockCarwashBoy,
                     onClick = {
                         onSelectTeamFilter(if (isSelected) null else summary.teamName)
                     }
@@ -620,6 +640,8 @@ private fun TeamSalesCard(
     isSelected: Boolean,
     isOwnerUnlocked: Boolean = false,
     onUnlockOwner: () -> Unit = {},
+    isCarwashBoyUnlocked: Boolean = false,
+    onUnlockCarwashBoy: () -> Unit = {},
     onClick: () -> Unit
 ) {
     val containerColor = if (isSelected) {
@@ -684,17 +706,30 @@ private fun TeamSalesCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(
+                    modifier = if (!isCarwashBoyUnlocked) Modifier.clickable { onUnlockCarwashBoy() } else Modifier
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Worker",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
+                        )
+                        if (!isCarwashBoyUnlocked) {
+                            Spacer(Modifier.width(2.dp))
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Locked",
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     Text(
-                        text = "Worker",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = formatCurrency(summary.todayWorkerCommission),
+                        text = if (isCarwashBoyUnlocked) formatCurrency(summary.todayWorkerCommission) else "Watch Ad 🎬",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        color = if (!isCarwashBoyUnlocked) MaterialTheme.colorScheme.primary else if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Column(
@@ -800,6 +835,8 @@ private fun CommissionSection(
     owner: Double,
     isOwnerUnlocked: Boolean = false,
     onUnlockOwner: () -> Unit = {},
+    isCarwashBoyUnlocked: Boolean = false,
+    onUnlockCarwashBoy: () -> Unit = {},
     adminPassword: String = "admin123"
 ) {
     Column(
@@ -817,13 +854,17 @@ private fun CommissionSection(
             CommisionCard(
                 modifier = Modifier.weight(1f),
                 title = "Carwash Boy",
-                amount = worker
+                amount = worker,
+                isLocked = !isCarwashBoyUnlocked,
+                subtitleLocked = "Watch Ad to View 🎬",
+                onClickLocked = onUnlockCarwashBoy
             )
             CommisionCard(
                 modifier = Modifier.weight(1f),
                 title = "Owner",
                 amount = owner,
                 isLocked = !isOwnerUnlocked,
+                subtitleLocked = "Tap to unlock",
                 onClickLocked = onUnlockOwner
             )
         }
@@ -836,6 +877,7 @@ private fun CommisionCard(
     title: String,
     amount: Double,
     isLocked: Boolean = false,
+    subtitleLocked: String = "Tap to unlock",
     onClickLocked: () -> Unit = {}
 ) {
     Card(
@@ -865,13 +907,13 @@ private fun CommisionCard(
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = if (isLocked) "₱ • • • • •" else formatCurrency(amount),
+                text = if (isLocked) "₱ • • • •" else formatCurrency(amount),
                 style = MaterialTheme.typography.titleLarge,
-                color = if (isLocked) MaterialTheme.colorScheme.outline else Color(0xFFFFA500),
+                color = if (isLocked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = if (isLocked) "Tap to unlock" else "Total for today",
+                text = if (isLocked) subtitleLocked else "Total for today",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
