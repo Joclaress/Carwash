@@ -12,8 +12,12 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -27,6 +31,9 @@ import com.example.carwash.home.HomeScreen.HomeScreen
 import com.example.carwash.model.AuthViewModel
 import com.example.carwash.screen.Screen
 import com.example.carwash.screen.SubscriptionScreen
+import com.example.carwash.screen.mainscreen.Profile
+import com.example.carwash.utils.AppUpdateInfoData
+import com.example.carwash.utils.InAppUpdateManager
 
 @Composable
 fun MainScreen(
@@ -37,6 +44,30 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val user by authViewModel.user.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    var updateInfo by remember { mutableStateOf<AppUpdateInfoData?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        InAppUpdateManager.checkFirestoreUpdate { latestCode, latestName, isForce, notes ->
+            updateInfo = AppUpdateInfoData(latestCode, latestName, isForce, notes)
+            showUpdateDialog = true
+        }
+    }
+
+    val currentUpdate = updateInfo
+    if (showUpdateDialog && currentUpdate != null) {
+        InAppUpdateManager.AppUpdateDialog(
+            latestVersionName = currentUpdate.latestVersionName,
+            updateNotes = currentUpdate.updateNotes,
+            isForce = currentUpdate.isForceUpdate,
+            onDismiss = { showUpdateDialog = false },
+            onUpdateClick = {
+                InAppUpdateManager.openPlayStorePage(context)
+            }
+        )
+    }
 
     // Block access if trial/subscription is expired and subscription is not valid
     if (user != null && !user!!.isSubscriptionValid && user!!.computedTrialExpired) {
