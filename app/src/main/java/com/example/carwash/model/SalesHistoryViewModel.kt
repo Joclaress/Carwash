@@ -203,6 +203,13 @@ class SalesHistoryViewModel @Inject constructor(
                 saleCalendar.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
                         saleCalendar.get(Calendar.MONTH) == today.get(Calendar.MONTH)
             }
+            SalesFilter.LAST_MONTH -> {
+                val lastMonth = Calendar.getInstance().apply {
+                    add(Calendar.MONTH, -1)
+                }
+                saleCalendar.get(Calendar.YEAR) == lastMonth.get(Calendar.YEAR) &&
+                        saleCalendar.get(Calendar.MONTH) == lastMonth.get(Calendar.MONTH)
+            }
         }
     }
 

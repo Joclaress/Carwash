@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
@@ -214,13 +215,17 @@ fun HomeScreenContent(
                             )
                         }
                     }
-                    if (user != null && user.isTrialActive) {
+                    if (user != null) {
                         item {
-                            TrialBannerCard(user = user, onUpgradeClick = onUpgradeClick)
+                            SubscriptionStatusCard(user = user, onUpgradeClick = onUpgradeClick)
                         }
                     }
                     item {
-                        SalesSummarySection(uiState = uiState)
+                        SalesSummarySection(
+                            uiState = uiState,
+                            isOwnerUnlocked = isOwnerUnlocked,
+                            onUnlockOwner = { showOwnerAuthDialog = true }
+                        )
                     }
                     item {
                         QuickActions(
@@ -332,15 +337,38 @@ fun HomeScreenContent(
 }
 
 @Composable
-private fun TrialBannerCard(
+private fun SubscriptionStatusCard(
     user: User,
     onUpgradeClick: () -> Unit = {}
 ) {
+    val isPro = user.isSubscriptionValid
+    val isTrial = user.isTrialActive
+
+    val title = when {
+        isPro -> "Pro Subscription Active"
+        isTrial -> "7-Day Free Trial Active"
+        else -> "Subscription Required"
+    }
+
+    val subtitle = when {
+        isPro -> if (user.subscriptionExpiresAt == 0L) "Lifetime Unlimited Access" else "${user.remainingSubscriptionDays} day(s) remaining before renewal"
+        isTrial -> "${user.remainingTrialDays} day(s) remaining in free trial"
+        else -> "Trial expired. Renew now to keep recording sales"
+    }
+
+    val buttonText = when {
+        isPro -> "Manage Plan"
+        isTrial -> "Upgrade Pro"
+        else -> "Renew ₱199"
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onUpgradeClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = if (isPro) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer
         )
     ) {
         Row(
@@ -354,14 +382,14 @@ private fun TrialBannerCard(
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (isPro) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(36.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.Star,
+                            imageVector = if (isPro) Icons.Default.Check else Icons.Default.Star,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = if (isPro) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -369,15 +397,15 @@ private fun TrialBannerCard(
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "7-Day Free Trial Active",
+                        text = title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = if (isPro) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        text = "${user.remainingTrialDays} day(s) remaining",
+                        text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        color = (if (isPro) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer).copy(alpha = 0.8f)
                     )
                 }
             }
@@ -385,7 +413,7 @@ private fun TrialBannerCard(
                 onClick = onUpgradeClick,
                 shape = RoundedCornerShape(100.dp)
             ) {
-                Text("Upgrade Pro", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text(buttonText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -449,7 +477,11 @@ private fun greeting(): String {
 }
 
 @Composable
-private fun SalesSummarySection(uiState: HomeUiState) {
+private fun SalesSummarySection(
+    uiState: HomeUiState,
+    isOwnerUnlocked: Boolean = false,
+    onUnlockOwner: () -> Unit = {}
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -470,7 +502,9 @@ private fun SalesSummarySection(uiState: HomeUiState) {
             modifier = Modifier.weight(1f),
             title = "This Month",
             amount = uiState.monthSales,
-            transactions = uiState.monthTransctionCount
+            transactions = uiState.monthTransctionCount,
+            isLocked = !isOwnerUnlocked,
+            onClickLocked = onUnlockOwner
         )
     }
 }
@@ -480,29 +514,49 @@ private fun SalesSummaryCard(
     modifier: Modifier = Modifier,
     title: String,
     amount: Double,
-    transactions: Int
+    transactions: Int,
+    isLocked: Boolean = false,
+    onClickLocked: () -> Unit = {}
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.then(
+            if (isLocked) Modifier.clickable { onClickLocked() } else Modifier
+        ),
         shape = RoundedCornerShape(18.dp)
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium
+                )
+                if (isLocked) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Locked",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = formatCurrency(amount),
+                text = if (isLocked) "₱ • • • •" else formatCurrency(amount),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = if (isLocked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "$transactions Transactions",
-                style = MaterialTheme.typography.labelSmall
+                text = if (isLocked) "Tap to Unlock" else "$transactions Transactions",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

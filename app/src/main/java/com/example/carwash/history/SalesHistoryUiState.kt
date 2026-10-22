@@ -8,7 +8,8 @@ enum class SalesFilter {
     YESTERDAY,
     THIS_WEEK,
     LAST_WEEK,
-    THIS_MONTH
+    THIS_MONTH,
+    LAST_MONTH
 }
 
 data class SalesHistoryUiState(

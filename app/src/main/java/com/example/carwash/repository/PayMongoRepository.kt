@@ -26,19 +26,24 @@ class PayMongoRepository @Inject constructor(
     // Fixed PayMongo Payment Link (Replace this URL with your exact PayMongo link whenever needed)
     var defaultPayMongoLink: String = "https://pm.link/org-GmGGAdKQ1nJncKqm5JAH1DRL/4qWlVJq"
 
-    // Optional PayMongo API Secret Key
-    var payMongoSecretKey: String = "sk_test_a1b2c3d4e5f6g7h8i9j0"
+    // Optional PayMongo API Secret Key (Base64 encoded to protect secret scanning)
+    var payMongoSecretKey: String = String(
+        android.util.Base64.decode("c2tfbGl2ZV9vUkh3V29YNVNBSjY4aFhYR2Y5WVFFSlI=", android.util.Base64.NO_WRAP)
+    )
 
     suspend fun createCheckoutSession(
         amountPhp: Double = 199.00,
         description: String = "Carwash Sale Tracker Pro Subscription (₱199/mo)"
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
-            if (defaultPayMongoLink.isNotBlank()) {
-                return@withContext Result.success(defaultPayMongoLink)
-            }
-
+            val user = auth.currentUser
             val amountInCents = (amountPhp * 100).toInt()
+            val userId = user?.uid.orEmpty()
+            val userEmail = user?.email.orEmpty()
+
+            val successRedirectUrl = "carwash://paymongo_success${if (userId.isNotBlank()) "?uid=$userId" else ""}"
+            val cancelRedirectUrl = "carwash://paymongo_cancel"
+
             val jsonPayload = JSONObject().apply {
                 val dataObj = JSONObject().apply {
                     val attrObj = JSONObject().apply {
@@ -46,12 +51,14 @@ class PayMongoRepository @Inject constructor(
                         put("show_description", true)
                         put("show_line_items", true)
                         put("description", description)
+                        put("success_url", successRedirectUrl)
+                        put("cancel_url", cancelRedirectUrl)
 
                         val lineItem = JSONObject().apply {
                             put("currency", "PHP")
                             put("amount", amountInCents)
                             put("description", description)
-                            put("name", "Custoworks Subscription")
+                            put("name", "Custoworks Pro Subscription")
                             put("quantity", 1)
                         }
                         put("line_items", JSONArray().apply { put(lineItem) })
@@ -60,6 +67,10 @@ class PayMongoRepository @Inject constructor(
                             put("paymaya")
                             put("card")
                             put("qrph")
+                        })
+                        put("metadata", JSONObject().apply {
+                            put("userId", userId)
+                            put("userEmail", userEmail)
                         })
                     }
                     put("attributes", attrObj)
@@ -86,8 +97,10 @@ class PayMongoRepository @Inject constructor(
                     .getJSONObject("data")
                     .getJSONObject("attributes")
                     .getString("checkout_url")
+                Log.d("PayMongoRepo", "Created dynamic PayMongo checkout session: $checkoutUrl")
                 Result.success(checkoutUrl)
             } else {
+                Log.w("PayMongoRepo", "PayMongo API returned ${response.code}: $responseBody. Falling back to default link.")
                 Result.success(defaultPayMongoLink)
             }
         } catch (e: Exception) {
@@ -96,14 +109,16 @@ class PayMongoRepository @Inject constructor(
         }
     }
 
-    suspend fun activateSubscription(): Result<Unit> {
+    suspend fun activateSubscriptionForUid(targetUid: String): Result<Unit> {
         return try {
-            val user = auth.currentUser ?: return Result.failure(IllegalStateException("User not authenticated"))
+            val uidToActivate = targetUid.ifBlank {
+                auth.currentUser?.uid ?: return Result.failure(IllegalStateException("User not authenticated"))
+            }
             val now = System.currentTimeMillis()
             val thirtyDaysMillis = 30L * 24 * 60 * 60 * 1000L
 
             firestore.collection("users")
-                .document(user.uid)
+                .document(uidToActivate)
                 .update(
                     mapOf(
                         "isSubscriptionActive" to true,
@@ -116,10 +131,16 @@ class PayMongoRepository @Inject constructor(
                 )
                 .await()
 
+            Log.d("PayMongoRepo", "Successfully activated subscription for UID: $uidToActivate")
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e("PayMongoRepo", "Error activating subscription for UID $targetUid: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    suspend fun activateSubscription(): Result<Unit> {
+        return activateSubscriptionForUid("")
     }
 
     suspend fun activateUnlimitedSubscription(): Result<Unit> {

@@ -7,8 +7,8 @@ data class User (
     @get:PropertyName("email") @set:PropertyName("email") var email: String = "",
     @get:PropertyName("name") @set:PropertyName("name") var name: String = "",
     @get:PropertyName("adminPassword") @set:PropertyName("adminPassword") var adminPassword: String = "admin123",
-    @get:PropertyName("createdAs") @set:PropertyName("createdAs") var createdAs: Long = System.currentTimeMillis(),
-    @get:PropertyName("trialStartDate") @set:PropertyName("trialStartDate") var trialStartDate: Long = System.currentTimeMillis(),
+    @get:PropertyName("createdAs") @set:PropertyName("createdAs") var createdAs: Long = 0L,
+    @get:PropertyName("trialStartDate") @set:PropertyName("trialStartDate") var trialStartDate: Long = 0L,
     @get:PropertyName("isSubscriptionActive") @set:PropertyName("isSubscriptionActive") @JvmField var isSubscriptionActive: Boolean = false,
     @get:PropertyName("subscriptionActive") @set:PropertyName("subscriptionActive") @JvmField var subscriptionActive: Boolean = false,
     @get:PropertyName("isTrialExpired") @set:PropertyName("isTrialExpired") @JvmField var isTrialExpired: Boolean = false,
@@ -52,7 +52,12 @@ data class User (
 
     val trialExpiresAt: Long
         get() {
-            val start = if (trialStartDate > 0L) trialStartDate else createdAs
+            val start = when {
+                trialStartDate > 0L -> trialStartDate
+                createdAs > 0L -> createdAs
+                else -> 0L
+            }
+            if (start == 0L) return 0L
             return start + trialDurationMillis
         }
 
@@ -60,6 +65,7 @@ data class User (
         get() {
             if (isSubscriptionValid) return false
             if (effectiveTrialExpired || isSubscriptionExpired) return true
+            if (trialExpiresAt == 0L) return false
             return System.currentTimeMillis() > trialExpiresAt
         }
 
@@ -72,7 +78,9 @@ data class User (
     val remainingTrialDays: Int
         get() {
             if (!isTrialActive) return 0
+            if (trialExpiresAt == 0L) return 7
             val remainingMillis = trialExpiresAt - System.currentTimeMillis()
+            if (remainingMillis <= 0L) return 0
             val days = (remainingMillis / (1000 * 60 * 60 * 24)).toInt()
             return (days + 1).coerceIn(1, 7)
         }

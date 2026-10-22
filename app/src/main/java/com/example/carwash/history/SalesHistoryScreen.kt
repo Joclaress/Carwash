@@ -67,6 +67,14 @@ fun SalesHistoryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val user by authViewModel.user.collectAsState()
     var selectedSaleForDetails by remember { mutableStateOf<Sale?>(null) }
+    var isOwnerUnlocked by remember { mutableStateOf(false) }
+    var showOwnerAuthDialog by remember { mutableStateOf(false) }
+
+    val isSensitiveFilter = uiState.selectedFilter == SalesFilter.THIS_MONTH ||
+                            uiState.selectedFilter == SalesFilter.LAST_MONTH ||
+                            uiState.selectedFilter == SalesFilter.ALL
+
+    val isLocked = isSensitiveFilter && !isOwnerUnlocked
 
     Scaffold(
         topBar = {
@@ -131,12 +139,16 @@ fun SalesHistoryScreen(
                     item {
                         HistoryFilters(
                             selected = uiState.selectedFilter,
-                            onSelected = viewModel::selectFilter
+                            onSelected = { filter ->
+                                viewModel.selectFilter(filter)
+                                if ((filter == SalesFilter.THIS_MONTH || filter == SalesFilter.LAST_MONTH || filter == SalesFilter.ALL) && !isOwnerUnlocked) {
+                                    showOwnerAuthDialog = true
+                                }
+                            }
                         )
                     }
 
                     item {
-                        val user by authViewModel.user.collectAsState()
                         HistorySummary(
                             total = uiState.totalSales,
                             transactions = uiState.filteredSales.size,
@@ -145,7 +157,8 @@ fun SalesHistoryScreen(
                             worker = uiState.workCommission,
                             owner = uiState.ownerShare,
                             average = uiState.averageSale,
-                            adminPassword = user?.effectiveAdminPassword ?: "admin123"
+                            isLocked = isLocked,
+                            onClickLocked = { showOwnerAuthDialog = true }
                         )
                     }
 
@@ -181,7 +194,14 @@ fun SalesHistoryScreen(
                             HistorySaleCard(
                                 sale = sale,
                                 isRepeatCustomer = isRepeat,
-                                onClick = { selectedSaleForDetails = sale }
+                                isLocked = isLocked,
+                                onClick = {
+                                    if (isLocked) {
+                                        showOwnerAuthDialog = true
+                                    } else {
+                                        selectedSaleForDetails = sale
+                                    }
+                                }
                             )
                         }
                     }
@@ -195,6 +215,17 @@ fun SalesHistoryScreen(
                     }
                 }
             }
+        }
+
+        if (showOwnerAuthDialog) {
+            com.example.carwash.components.AdminAuthDialog(
+                adminPassword = user?.effectiveAdminPassword ?: "admin123",
+                onDismiss = { showOwnerAuthDialog = false },
+                onSuccess = {
+                    isOwnerUnlocked = true
+                    showOwnerAuthDialog = false
+                }
+            )
         }
 
         selectedSaleForDetails?.let { sale ->
@@ -277,6 +308,15 @@ private fun HistoryFilters(
                 onSelected = onSelected
             )
         }
+
+        item {
+            SalesFilterChip(
+                title = "Last Month",
+                filter = SalesFilter.LAST_MONTH,
+                selected = selected,
+                onSelected = onSelected
+            )
+        }
     }
 }
 
@@ -303,18 +343,18 @@ private fun HistorySummary(
     worker: Double,
     owner: Double,
     average: Double,
-    adminPassword: String = "admin123"
+    isLocked: Boolean = false,
+    onClickLocked: () -> Unit = {}
 ) {
-    var isOwnerUnlocked by remember { mutableStateOf(false) }
-    var showOwnerAuthDialog by remember { mutableStateOf(false) }
-
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         HistorySummaryCard(
             title = "Total Sales",
             amount = total,
-            subtitle = "$transactions Transactions"
+            subtitle = if (isLocked) "Tap to Unlock" else "$transactions Transactions",
+            isLocked = isLocked,
+            onClickLocked = onClickLocked
         )
 
         Row(
@@ -325,14 +365,18 @@ private fun HistorySummary(
                 modifier = Modifier.weight(1f),
                 title = "💵 Cash Sales",
                 amount = cash,
-                subtitle = "Cash Payments"
+                subtitle = if (isLocked) "Tap to Unlock" else "Cash Payments",
+                isLocked = isLocked,
+                onClickLocked = onClickLocked
             )
 
             HistorySummaryCard(
                 modifier = Modifier.weight(1f),
                 title = "💙 GCash Sales",
                 amount = gcash,
-                subtitle = "GCash Payments"
+                subtitle = if (isLocked) "Tap to Unlock" else "GCash Payments",
+                isLocked = isLocked,
+                onClickLocked = onClickLocked
             )
         }
 
@@ -344,31 +388,27 @@ private fun HistorySummary(
                 modifier = Modifier.weight(1f),
                 title = "Carwash Boy",
                 amount = worker,
-                subtitle = "Commission"
+                subtitle = if (isLocked) "Tap to Unlock" else "Commission",
+                isLocked = isLocked,
+                onClickLocked = onClickLocked
             )
 
             HistorySummaryCard(
                 modifier = Modifier.weight(1f),
                 title = "Owner",
                 amount = owner,
-                subtitle = if (isOwnerUnlocked) "Income" else "Tap to Unlock",
-                isLocked = !isOwnerUnlocked,
-                onClickLocked = { showOwnerAuthDialog = true }
+                subtitle = if (isLocked) "Tap to Unlock" else "Income",
+                isLocked = isLocked,
+                onClickLocked = onClickLocked
             )
         }
 
         HistorySummaryCard(
             title = "Average Sale",
             amount = average,
-            subtitle = "Average per transaction"
-        )
-    }
-
-    if (showOwnerAuthDialog) {
-        com.example.carwash.components.AdminAuthDialog(
-            adminPassword = adminPassword,
-            onDismiss = { showOwnerAuthDialog = false },
-            onSuccess = { isOwnerUnlocked = true }
+            subtitle = if (isLocked) "Tap to Unlock" else "Average per transaction",
+            isLocked = isLocked,
+            onClickLocked = onClickLocked
         )
     }
 }
@@ -430,6 +470,7 @@ private fun HistorySummaryCard(
 private fun HistorySaleCard(
     sale: Sale,
     isRepeatCustomer: Boolean = false,
+    isLocked: Boolean = false,
     onClick: () -> Unit = {}
 ) {
     Card(
@@ -525,9 +566,10 @@ private fun HistorySaleCard(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = formatCurrency(sale.amount),
+                    text = if (isLocked) "₱ • • • •" else formatCurrency(sale.amount),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (isLocked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(Modifier.height(4.dp))
