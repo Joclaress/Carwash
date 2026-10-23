@@ -170,8 +170,10 @@ fun SalesHistoryScreen(
                             owner = uiState.ownerShare,
                             average = uiState.averageSale,
                             isLocked = isLocked,
+                            isOwnerUnlocked = isOwnerUnlocked,
                             isCarwashBoyUnlocked = isCarwashBoyUnlocked,
                             onClickLocked = { showOwnerAuthDialog = true },
+                            onUnlockOwner = { showOwnerAuthDialog = true },
                             onUnlockCarwashBoy = onUnlockCarwashBoy
                         )
                     }
@@ -358,8 +360,10 @@ private fun HistorySummary(
     owner: Double,
     average: Double,
     isLocked: Boolean = false,
+    isOwnerUnlocked: Boolean = false,
     isCarwashBoyUnlocked: Boolean = false,
     onClickLocked: () -> Unit = {},
+    onUnlockOwner: () -> Unit = {},
     onUnlockCarwashBoy: () -> Unit = {}
 ) {
     Column(
@@ -419,9 +423,15 @@ private fun HistorySummary(
                 modifier = Modifier.weight(1f),
                 title = "Owner",
                 amount = owner,
-                subtitle = if (isLocked) "Tap to Unlock" else "Income",
-                isLocked = isLocked,
-                onClickLocked = onClickLocked
+                subtitle = if (isLocked || !isOwnerUnlocked) "Tap to Unlock" else "Income",
+                isLocked = isLocked || !isOwnerUnlocked,
+                onClickLocked = {
+                    if (isLocked) {
+                        onClickLocked()
+                    } else if (!isOwnerUnlocked) {
+                        onUnlockOwner()
+                    }
+                }
             )
         }
 
